@@ -19,4 +19,8 @@ void set_description(const std::unique_ptr<seastar_opts>& opts, const rust::Str 
 
 void set_smp(const std::unique_ptr<seastar_opts>& opts, const unsigned smp);
 
-std::unique_ptr<seastar::app_template> new_app_template_from_options(const std::unique_ptr<const seastar_opts>& opts);
+std::unique_ptr<seastar::app_template> new_app_template_from_options(std::unique_ptr<seastar_opts>& opts);
+
+//int run_void(std::unique_ptr<seastar::app_template>& app, int ac, int av, rust::Fn<void()> func);
+//
+//int run_int(std::unique_ptr<seastar::app_template>& app, int ac, int av, rust::Fn<int()> func);

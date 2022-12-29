@@ -36,6 +36,7 @@ fn main() {
         .flag_if_supported("-Wall")
         .flag_if_supported("-std=c++20")
         .flag_if_supported("-fcoroutines")
+        .flag_if_supported("-fdiagnostics-color=always")
         .define("SEASTAR_API_LEVEL", "6")
         .define("SEASTAR_SCHEDULING_GROUPS_COUNT", "16")
         .includes(&seastar.include_paths)
