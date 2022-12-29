@@ -8,6 +8,7 @@ links = "seastar"
 
 [dependencies]
 cxx = "1"
+num_cpus = "1.15.0"
 
 [build-dependencies]
 cxx-build = { version = "1", features = ["parallel"] }

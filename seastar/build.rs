@@ -39,6 +39,7 @@ fn main() {
         .define("SEASTAR_API_LEVEL", "6")
         .define("SEASTAR_SCHEDULING_GROUPS_COUNT", "16")
         .includes(&seastar.include_paths)
+        .file("src/config_and_start_seastar.cc")
         .compile("seastar-rs");
 
     println!("cargo:rerun-if-changed=build.rs");
