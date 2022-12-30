@@ -1,0 +1,43 @@
+name: Rust
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Format code
+      run: cargo fmt --verbose --all --check
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Install lld
+      run: |
+        sudo apt install lld
+        sudo apt install libunistring-dev
+        sudo apt install libudev-dev
+    - name: Install Seastar
+      run: |
+        cd ..
+        git clone https://github.com/scylladb/seastar.git
+        cd seastar/
+        sudo ./install-dependencies.sh
+        ./configure.py --mode=release --prefix=/usr/local --without-tests --without-demos --without-apps
+        ninja -C build/release
+        sudo ninja -C build/release install
+        export PKG_CONFIG_PATH="/usr/local/seastar/build/release/:$PKG_CONFIG_PATH"
+    - name: Build
+      run: RUSTFLAGS="-C link-arg=-fuse-ld=lld" cargo build
+    - name: Run linter
+      run: cargo clippy --verbose --examples --tests
+    - name: Test
+      run: RUSTFLAGS="-C link-arg=-fuse-ld=lld" cargo test
