@@ -1,5 +1,5 @@
+pub use crate::config_and_start_seastar::ffi::*;
 use cxx::{CxxString, UniquePtr};
-use crate::config_and_start_seastar::ffi::*;
 
 #[cxx::bridge(namespace = "seastar")]
 mod ffi {
@@ -18,13 +18,15 @@ mod ffi {
         fn get_name(opts: &UniquePtr<seastar_options>) -> &CxxString;
         fn get_description(opts: &UniquePtr<seastar_options>) -> &CxxString;
         fn get_smp(opts: &UniquePtr<seastar_options>) -> u16; //TODO: think of size (16/32)
-        // Setters
+                                                              // Setters
         fn set_name(opts: &mut UniquePtr<seastar_options>, name: &str);
         fn set_description(opts: &mut UniquePtr<seastar_options>, description: &str);
         fn set_smp(opts: &mut UniquePtr<seastar_options>, smp: u16);
 
         // Returns a pointer to an `app_template` instance
-        fn new_app_template_from_options(opts: &UniquePtr<seastar_options>) -> UniquePtr<app_template>;
+        fn new_app_template_from_options(
+            opts: &UniquePtr<seastar_options>,
+        ) -> UniquePtr<app_template>;
 
         // fn run_void(app: &UniquePtr<app_template>, func: fn()) -> i32;
         // fn run_int(app: &UniquePtr<app_template>, func: fn() -> i32) -> i32;

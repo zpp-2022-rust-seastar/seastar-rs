@@ -1,34 +1,36 @@
 #include "config_and_start_seastar.hh"
 
-std::unique_ptr<seastar_opts> new_options() {
-    return std::make_unique<seastar_opts>(seastar_opts());
+namespace seastar {
+
+std::unique_ptr<seastar_options> new_options() {
+    return std::make_unique<seastar_options>(seastar_options());
 }
 
-std::string get_name(const std::unique_ptr<const seastar_opts> opts) {
+std::string get_name(const std::unique_ptr<const seastar_options> opts) {
     return opts->name;
 }
 
-std::string get_description(const std::unique_ptr<const seastar_opts> opts) {
+std::string get_description(const std::unique_ptr<const seastar_options> opts) {
     return opts->description;
 }
 
-unsigned get_smp(const std::unique_ptr<const seastar_opts> opts) {
+unsigned get_smp(const std::unique_ptr<const seastar_options> opts) {
     return opts->smp_opts.smp;
 }
 
-void set_name(const std::unique_ptr<seastar_opts> opts, const rust::Str name) {
+void set_name(const std::unique_ptr<seastar_options> opts, const rust::Str name) {
     opts->name = std::string(name.begin(), name.size());
 }
 
-void set_description(const std::unique_ptr<seastar_opts> opts, const rust::Str description) {
+void set_description(const std::unique_ptr<seastar_options> opts, const rust::Str description) {
     opts->description = std::string(description.begin(), description.size());;
 }
 
-void set_smp(const std::unique_ptr<seastar_opts> opts, const unsigned smp) {
+void set_smp(const std::unique_ptr<seastar_options> opts, const unsigned smp) {
     opts->smp_opts.smp.set_value(smp);
 }
 
-std::unique_ptr<seastar::app_template> new_app_template_from_options(std::unique_ptr<seastar_opts>& opts) {
+std::unique_ptr<seastar::app_template> new_app_template_from_options(std::unique_ptr<seastar_options>& opts) {
     return std::make_unique<seastar::app_template>(std::move(*opts));
 }
 
@@ -47,3 +49,5 @@ std::unique_ptr<seastar::app_template> new_app_template_from_options(std::unique
 //        })
 //    });
 //}
+
+} // namespace seastar
