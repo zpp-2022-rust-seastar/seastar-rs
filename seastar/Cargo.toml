@@ -8,6 +8,8 @@ links = "seastar"
 
 [dependencies]
 cxx = "1"
+
+[dev-dependencies]
 num_cpus = "1.15.0"
 
 [build-dependencies]

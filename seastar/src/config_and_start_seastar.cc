@@ -6,11 +6,11 @@ std::unique_ptr<seastar_options> new_options() {
     return std::make_unique<seastar_options>(seastar_options());
 }
 
-std::string get_name(const std::unique_ptr<const seastar_options> opts) {
+const std::string& get_name(const std::unique_ptr<const seastar_options> opts) {
     return opts->name;
 }
 
-std::string get_description(const std::unique_ptr<const seastar_options> opts) {
+const std::string& get_description(const std::unique_ptr<const seastar_options> opts) {
     return opts->description;
 }
 

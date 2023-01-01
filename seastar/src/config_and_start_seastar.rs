@@ -10,7 +10,7 @@ mod ffi {
     }
 
     unsafe extern "C++" {
-        include!("config_and_start_seastar.hh");
+        include!("seastar/src/config_and_start_seastar.hh");
 
         // Returns a pointer to default `seastar_options`
         fn new_options() -> UniquePtr<seastar_options>;
@@ -18,22 +18,18 @@ mod ffi {
         fn get_name(opts: &UniquePtr<seastar_options>) -> &CxxString;
         fn get_description(opts: &UniquePtr<seastar_options>) -> &CxxString;
         fn get_smp(opts: &UniquePtr<seastar_options>) -> u16; //TODO: think of size (16/32)
-                                                              // Setters
+        // Setters
         fn set_name(opts: &mut UniquePtr<seastar_options>, name: &str);
         fn set_description(opts: &mut UniquePtr<seastar_options>, description: &str);
         fn set_smp(opts: &mut UniquePtr<seastar_options>, smp: u16);
 
         // Returns a pointer to an `app_template` instance
-        fn new_app_template_from_options(
-            opts: &UniquePtr<seastar_options>,
-        ) -> UniquePtr<app_template>;
+        fn new_app_template_from_options(opts: &UniquePtr<seastar_options>) -> UniquePtr<app_template>;
 
         // fn run_void(app: &UniquePtr<app_template>, func: fn()) -> i32;
         // fn run_int(app: &UniquePtr<app_template>, func: fn() -> i32) -> i32;
     }
 }
-
-//TODO: "unncecessary `unsafe` block"
 
 struct Options {
     opts: UniquePtr<seastar_options>,
@@ -42,40 +38,34 @@ struct Options {
 impl Options {
     fn new() -> Self {
         Options {
-            opts: unsafe { new_options() },
+            opts: new_options(),
         }
     }
 
     fn get_name(&self) -> &str {
-        unsafe { (*get_name(&self.opts)).to_str().unwrap() } // TODO is unwrap here ok?
+        (*get_name(&self.opts)).to_str().unwrap() // TODO is unwrap here ok?
     }
 
     fn get_description(&self) -> &str {
-        unsafe { (*get_description(&self.opts)).to_str().unwrap() }
+        (*get_description(&self.opts)).to_str().unwrap()
     }
 
     // Gets the number of threads (default: one per CPU)
     fn get_smp(&self) -> u16 {
-        unsafe { get_smp(&self.opts) }
+        get_smp(&self.opts)
     }
 
     fn set_name(&mut self, name: &str) {
-        unsafe {
-            set_name(&mut self.opts, name);
-        }
+        set_name(&mut self.opts, name);
     }
 
     fn set_description(&mut self, description: &str) {
-        unsafe {
-            set_description(&mut self.opts, description);
-        }
+        set_description(&mut self.opts, description);
     }
 
     // Sets the number of threads (default: one per CPU)
     fn set_smp(&mut self, smp: u16) {
-        unsafe {
-            set_smp(&mut self.opts, smp);
-        }
+        set_smp(&mut self.opts, smp);
     }
 }
 
