@@ -6,31 +6,31 @@ std::unique_ptr<seastar_options> new_options() {
     return std::make_unique<seastar_options>(seastar_options());
 }
 
-const std::string& get_name(const std::unique_ptr<const seastar_options> opts) {
+const std::string& get_name(const std::unique_ptr<seastar_options> opts) {
     return opts->name;
 }
 
-const std::string& get_description(const std::unique_ptr<const seastar_options> opts) {
+const std::string& get_description(const std::unique_ptr<seastar_options> opts) {
     return opts->description;
 }
 
-unsigned get_smp(const std::unique_ptr<const seastar_options> opts) {
-    return opts->smp_opts.smp;
+uint32_t get_smp(const std::unique_ptr<seastar_options> opts) {
+    return (uint32_t)opts->smp_opts.smp;
 }
 
-void set_name(const std::unique_ptr<seastar_options> opts, const rust::Str name) {
+void set_name(std::unique_ptr<seastar_options> opts, const rust::Str name) {
     opts->name = std::string(name.begin(), name.size());
 }
 
-void set_description(const std::unique_ptr<seastar_options> opts, const rust::Str description) {
+void set_description(std::unique_ptr<seastar_options> opts, const rust::Str description) {
     opts->description = std::string(description.begin(), description.size());;
 }
 
-void set_smp(const std::unique_ptr<seastar_options> opts, const unsigned smp) {
-    opts->smp_opts.smp.set_value(smp);
+void set_smp(std::unique_ptr<seastar_options> opts, const uint32_t smp) {
+    opts->smp_opts.smp.set_value((unsigned)smp);
 }
 
-std::unique_ptr<seastar::app_template> new_app_template_from_options(std::unique_ptr<seastar_options>& opts) {
+std::unique_ptr<seastar::app_template> new_app_template_from_options(const std::unique_ptr<seastar_options>& opts) {
     return std::make_unique<seastar::app_template>(std::move(*opts));
 }
 

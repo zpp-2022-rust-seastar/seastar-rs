@@ -17,11 +17,11 @@ mod ffi {
         // Getters
         fn get_name(opts: &UniquePtr<seastar_options>) -> &CxxString;
         fn get_description(opts: &UniquePtr<seastar_options>) -> &CxxString;
-        fn get_smp(opts: &UniquePtr<seastar_options>) -> u16; //TODO: think of size (16/32)
+        fn get_smp(opts: &UniquePtr<seastar_options>) -> u32; //TODO: think of size (16/32)
         // Setters
         fn set_name(opts: &mut UniquePtr<seastar_options>, name: &str);
         fn set_description(opts: &mut UniquePtr<seastar_options>, description: &str);
-        fn set_smp(opts: &mut UniquePtr<seastar_options>, smp: u16);
+        fn set_smp(opts: &mut UniquePtr<seastar_options>, smp: u32);
 
         // Returns a pointer to an `app_template` instance
         fn new_app_template_from_options(opts: &UniquePtr<seastar_options>) -> UniquePtr<app_template>;
@@ -51,7 +51,7 @@ impl Options {
     }
 
     // Gets the number of threads (default: one per CPU)
-    fn get_smp(&self) -> u16 {
+    fn get_smp(&self) -> u32 {
         get_smp(&self.opts)
     }
 
@@ -64,7 +64,7 @@ impl Options {
     }
 
     // Sets the number of threads (default: one per CPU)
-    fn set_smp(&mut self, smp: u16) {
+    fn set_smp(&mut self, smp: u32) {
         set_smp(&mut self.opts, smp);
     }
 }
@@ -100,7 +100,7 @@ fn test_new_options_contain_default_values() {
     let opts = Options::new();
     assert_eq!(opts.get_name(), "App");
     assert_eq!(opts.get_description(), "");
-    assert_eq!(opts.get_smp(), num_cpus::get() as u16);
+    assert_eq!(opts.get_smp(), num_cpus::get() as u32);
 }
 
 #[test]
