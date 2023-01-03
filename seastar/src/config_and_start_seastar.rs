@@ -4,13 +4,10 @@ use cxx::{CxxString, UniquePtr};
 #[cxx::bridge(namespace = "seastar")]
 mod ffi {
 
-    extern "C++" {
-        type seastar_options;
-        type app_template;
-    }
-
     unsafe extern "C++" {
         include!("seastar/src/config_and_start_seastar.hh");
+        type seastar_options;
+        type app_template;
 
         // Returns a pointer to default `seastar_options`
         fn new_options() -> UniquePtr<seastar_options>;
@@ -19,9 +16,9 @@ mod ffi {
         fn get_description(opts: &UniquePtr<seastar_options>) -> &CxxString;
         fn get_smp(opts: &UniquePtr<seastar_options>) -> u32; //TODO: think of size (16/32)
         // Setters
-        fn set_name(opts: &mut UniquePtr<seastar_options>, name: &str);
-        fn set_description(opts: &mut UniquePtr<seastar_options>, description: &str);
-        fn set_smp(opts: &mut UniquePtr<seastar_options>, smp: u32);
+        fn set_name(opts: &UniquePtr<seastar_options>, name: &str);
+        fn set_description(opts: &UniquePtr<seastar_options>, description: &str);
+        fn set_smp(opts: &UniquePtr<seastar_options>, smp: u32);
 
         // Returns a pointer to an `app_template` instance
         fn new_app_template_from_options(opts: &UniquePtr<seastar_options>) -> UniquePtr<app_template>;

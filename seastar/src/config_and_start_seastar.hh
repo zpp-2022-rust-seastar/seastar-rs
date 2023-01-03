@@ -15,11 +15,11 @@ const std::string& get_description(const std::unique_ptr<seastar_options>& opts)
 
 uint32_t get_smp(const std::unique_ptr<seastar_options>& opts);
 
-void set_name(std::unique_ptr<seastar_options>& opts, const rust::Str name);
+void set_name(const std::unique_ptr<seastar_options>& opts, const rust::Str name);
 
-void set_description(std::unique_ptr<seastar_options>& opts, const rust::Str description);
+void set_description(const std::unique_ptr<seastar_options>& opts, const rust::Str description);
 
-void set_smp(std::unique_ptr<seastar_options>& opts, const uint32_t smp);
+void set_smp(const std::unique_ptr<seastar_options>& opts, const uint32_t smp);
 
 std::unique_ptr<seastar::app_template> new_app_template_from_options(const std::unique_ptr<seastar_options>& opts);
 
