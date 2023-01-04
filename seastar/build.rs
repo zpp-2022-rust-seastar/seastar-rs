@@ -42,6 +42,7 @@ fn main() {
         .flag_if_supported("-std=c++20")
         .flag_if_supported("-fcoroutines")
         .includes(&seastar.include_paths)
+        .cpp_link_stdlib("stdc++")
         .compile("seastar-rs");
 
     println!("cargo:rerun-if-changed=build.rs");
