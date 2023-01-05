@@ -13,9 +13,9 @@ mod ffi {
         fn new_options() -> UniquePtr<seastar_options>;
         // Getters
         fn get_name(opts: &UniquePtr<seastar_options>) -> &str;
-        fn get_description(opts: &UniquePtr<seastar_options>) -> &CxxString;
-        fn get_smp(opts: &UniquePtr<seastar_options>) -> u32; //TODO: think of size (16/32)
-                                                              // Setters
+        fn get_description(opts: &UniquePtr<seastar_options>) -> &str;
+        fn get_smp(opts: &UniquePtr<seastar_options>) -> u32;
+        // Setters
         fn set_name(opts: &UniquePtr<seastar_options>, name: &str);
         fn set_description(opts: &UniquePtr<seastar_options>, description: &str);
         fn set_smp(opts: &UniquePtr<seastar_options>, smp: u32);
@@ -43,11 +43,10 @@ impl Options {
 
     fn get_name(&self) -> &str {
         get_name(&self.opts)
-        //(*get_name(&self.opts)).to_str().unwrap() // TODO is unwrap here ok?
     }
 
     fn get_description(&self) -> &str {
-        (*get_description(&self.opts)).to_str().unwrap()
+        get_description(&self.opts)
     }
 
     // Gets the number of threads (default: one per CPU)
