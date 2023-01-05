@@ -31,17 +31,18 @@ fn main() {
         .map(|p| PathBuf::try_from(p).unwrap())
         .collect::<Vec<_>>();
 
-    // TODO: The API level and scheduling group count
-    // should be configurable somehow
-    cxx_build::bridges(&cxx_bridges)
+    let mut build = cxx_build::bridges(&cxx_bridges);
+    for (var, value) in &seastar.defines {
+        match value {
+            Some(val) => build.define(var, val.as_str()),
+            None => build.define(var, None),
+        };
+    }
+    build
         .flag_if_supported("-Wall")
         .flag_if_supported("-std=c++20")
         .flag_if_supported("-fcoroutines")
-        .flag_if_supported("-fdiagnostics-color=always")
-        .define("SEASTAR_API_LEVEL", "6")
-        .define("SEASTAR_SCHEDULING_GROUPS_COUNT", "16")
         .includes(&seastar.include_paths)
-        .file("src/config_and_start_seastar.cc")
         .cpp_link_stdlib("stdc++")
         .compile("seastar-rs");
 
