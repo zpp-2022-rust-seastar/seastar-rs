@@ -12,16 +12,18 @@ mod ffi {
         // Returns a pointer to default `seastar_options`
         fn new_options() -> UniquePtr<seastar_options>;
         // Getters
-        fn get_name(opts: &UniquePtr<seastar_options>) -> &CxxString;
+        fn get_name(opts: &UniquePtr<seastar_options>) -> &str;
         fn get_description(opts: &UniquePtr<seastar_options>) -> &CxxString;
         fn get_smp(opts: &UniquePtr<seastar_options>) -> u32; //TODO: think of size (16/32)
-        // Setters
+                                                              // Setters
         fn set_name(opts: &UniquePtr<seastar_options>, name: &str);
         fn set_description(opts: &UniquePtr<seastar_options>, description: &str);
         fn set_smp(opts: &UniquePtr<seastar_options>, smp: u32);
 
         // Returns a pointer to an `app_template` instance
-        fn new_app_template_from_options(opts: &UniquePtr<seastar_options>) -> UniquePtr<app_template>;
+        fn new_app_template_from_options(
+            opts: &UniquePtr<seastar_options>,
+        ) -> UniquePtr<app_template>;
 
         // fn run_void(app: &UniquePtr<app_template>, func: fn()) -> i32;
         // fn run_int(app: &UniquePtr<app_template>, func: fn() -> i32) -> i32;
@@ -40,7 +42,8 @@ impl Options {
     }
 
     fn get_name(&self) -> &str {
-        (*get_name(&self.opts)).to_str().unwrap() // TODO is unwrap here ok?
+        get_name(&self.opts)
+        //(*get_name(&self.opts)).to_str().unwrap() // TODO is unwrap here ok?
     }
 
     fn get_description(&self) -> &str {

@@ -9,9 +9,9 @@ using seastar_options = app_template::seastar_options;
 
 std::unique_ptr<seastar_options> new_options();
 
-const std::string& get_name(const std::unique_ptr<seastar_options>& opts);
+rust::Str get_name(const std::unique_ptr<seastar_options>& opts);
 
-const std::string& get_description(const std::unique_ptr<seastar_options>& opts);
+rust::Str get_description(const std::unique_ptr<seastar_options>& opts);
 
 uint32_t get_smp(const std::unique_ptr<seastar_options>& opts);
 

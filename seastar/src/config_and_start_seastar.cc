@@ -3,15 +3,15 @@
 namespace seastar {
 
 std::unique_ptr<seastar_options> new_options() {
-    return std::make_unique<seastar_options>(seastar_options());
+    return std::make_unique<seastar_options>();
 }
 
-const std::string& get_name(const std::unique_ptr<seastar_options>& opts) {
-    return opts->name;
+rust::Str get_name(const std::unique_ptr<seastar_options>& opts) {
+    return rust::Str(&*opts->name.begin(), opts->name.size());
 }
 
-const std::string& get_description(const std::unique_ptr<seastar_options>& opts) {
-    return opts->description;
+rust::Str get_description(const std::unique_ptr<seastar_options>& opts) {
+    return rust::Str(&*opts->description.begin(), opts->description.size());
 }
 
 uint32_t get_smp(const std::unique_ptr<seastar_options>& opts) {
@@ -19,7 +19,7 @@ uint32_t get_smp(const std::unique_ptr<seastar_options>& opts) {
 }
 
 void set_name(const std::unique_ptr<seastar_options>& opts, const rust::Str name) {
-    opts->name = std::string(name.begin(), name.size());
+    opts->name = sstring(name.begin(), name.size());
 }
 
 void set_description(const std::unique_ptr<seastar_options>& opts, const rust::Str description) {
