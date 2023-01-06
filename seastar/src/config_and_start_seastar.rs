@@ -21,9 +21,7 @@ mod ffi {
         fn set_smp(opts: &UniquePtr<seastar_options>, smp: u32);
 
         // Returns a pointer to an `app_template` instance
-        fn new_app_template_from_options(
-            opts: &UniquePtr<seastar_options>,
-        ) -> UniquePtr<app_template>;
+        fn new_app_template_from_options(opts: &UniquePtr<seastar_options>) -> UniquePtr<app_template>;
 
         // fn run_void(app: &UniquePtr<app_template>, func: fn()) -> i32;
         // fn run_int(app: &UniquePtr<app_template>, func: fn() -> i32) -> i32;

@@ -44,6 +44,7 @@ fn main() {
         .flag_if_supported("-fcoroutines")
         .includes(&seastar.include_paths)
         .cpp_link_stdlib("stdc++")
+        .file("src/config_and_start_seastar.cc")
         .compile("seastar-rs");
 
     println!("cargo:rerun-if-changed=build.rs");
