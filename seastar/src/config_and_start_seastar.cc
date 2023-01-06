@@ -15,7 +15,11 @@ rust::Str get_description(const std::unique_ptr<seastar_options>& opts) {
 }
 
 uint32_t get_smp(const std::unique_ptr<seastar_options>& opts) {
-    return (uint32_t)opts->smp_opts.smp.get_value();
+    if (opts->smp_opts.smp) {
+        return (uint32_t)opts->smp_opts.smp.get_value();
+    } else {
+        return (uint32_t)get_current_cpuset().size();
+    }
 }
 
 void set_name(const std::unique_ptr<seastar_options>& opts, const rust::Str name) {
