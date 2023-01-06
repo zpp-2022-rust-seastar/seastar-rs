@@ -15,7 +15,7 @@ rust::Str get_description(const std::unique_ptr<seastar_options>& opts) {
 }
 
 uint32_t get_smp(const std::unique_ptr<seastar_options>& opts) {
-    return (uint32_t)opts->smp_opts.smp;
+    return (uint32_t)opts->smp_opts.smp.get_value();
 }
 
 void set_name(const std::unique_ptr<seastar_options>& opts, const rust::Str name) {
@@ -33,7 +33,7 @@ void set_smp(const std::unique_ptr<seastar_options>& opts, const uint32_t smp) {
 std::unique_ptr<seastar::app_template> new_app_template_from_options(const std::unique_ptr<seastar_options>& opts) {
     return std::make_unique<seastar::app_template>(std::move(*opts));
 }
-
+//sshfs student2@n21.sarna.dev:~/kacper/seastar-rs mnt/ -p 7132
 //int run_void(std::unique_ptr<seastar::app_template>& app, int ac, int av, rust::Fn<void()> func) {
 //    return app->run(ac, av, [] {
 //        return seastar::make_ready_future<>().then([] {
