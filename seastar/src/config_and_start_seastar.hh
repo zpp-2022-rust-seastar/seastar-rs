@@ -23,8 +23,8 @@ void set_smp(const std::unique_ptr<seastar_options>& opts, const uint32_t smp);
 
 std::unique_ptr<seastar::app_template> new_app_template_from_options(const std::unique_ptr<seastar_options>& opts);
 
-//int run_void(std::unique_ptr<seastar::app_template>& app, int ac, int av, rust::Fn<void()> func);
-//
-//int run_int(std::unique_ptr<seastar::app_template>& app, int ac, int av, rust::Fn<int()> func);
+int32_t run_void(const std::unique_ptr<seastar::app_template>& app, const rust::Vec<rust::String>& args, rust::Fn<void()> func);
+
+int32_t run_int(const std::unique_ptr<seastar::app_template>& app, const rust::Vec<rust::String>& args, rust::Fn<int()> func);
 
 } // namespace seastar

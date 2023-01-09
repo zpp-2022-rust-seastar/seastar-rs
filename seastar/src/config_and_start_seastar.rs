@@ -1,5 +1,5 @@
 pub use crate::config_and_start_seastar::ffi::*;
-use cxx::{CxxString, UniquePtr};
+use cxx::UniquePtr;
 
 #[cxx::bridge(namespace = "seastar")]
 mod ffi {
@@ -23,8 +23,8 @@ mod ffi {
         // Returns a pointer to an `app_template` instance
         fn new_app_template_from_options(opts: &UniquePtr<seastar_options>) -> UniquePtr<app_template>;
 
-        // fn run_void(app: &UniquePtr<app_template>, func: fn()) -> i32;
-        // fn run_int(app: &UniquePtr<app_template>, func: fn() -> i32) -> i32;
+        fn run_void(app: &UniquePtr<app_template>, args: &Vec<String>, func: fn()) -> i32;
+        fn run_int(app: &UniquePtr<app_template>, args: &Vec<String>, func: fn() -> i32) -> i32;
     }
 }
 
@@ -83,12 +83,12 @@ impl AppTemplate {
         }
     }
 
-    fn run_void(&self, func: fn()) -> i32 {
-        todo!()
+    fn run_void(&self, args: &Vec<String>, func: fn()) -> i32 {
+        run_void(&self.app, args, func)
     }
 
-    fn run_int(&self, func: fn() -> i32) -> i32 {
-        todo!()
+    fn run_int(&self, args: &Vec<String>, func: fn() -> i32) -> i32 {
+        run_int(&self.app, args, func)
     }
 }
 
@@ -135,10 +135,18 @@ fn test_new_app_template_from_options_gets_created() {
 
 #[test]
 fn test_run_int() {
-    //TODO
+    let opts = Options::default();
+    let app = AppTemplate::new_from_options(opts);
+    let args = vec![String::from("test")];
+    fn func() -> i32 { return 42 }
+    assert_eq!(app.run_int(&args, func), 42);
 }
 
 #[test]
 fn test_run_void() {
-    //TODO
+    let opts = Options::default();
+    let app = AppTemplate::new_from_options(opts);
+    let args = vec![String::from("test")];
+    fn func() {}
+    assert_eq!(app.run_void(&args, func), 0);
 }
