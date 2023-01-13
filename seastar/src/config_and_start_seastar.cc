@@ -66,36 +66,44 @@ static void free_args(char** av, size_t ac) {
 }
 
 int32_t run_void(const std::unique_ptr<seastar::app_template>& app, const rust::Vec<rust::String>& args, rust::Fn<void()> func) {
+    int ac = args.size();
     char** av = args_as_ptr(args);
     if (av == nullptr) {
         return 1;
     }
 
-    int32_t exit_value = app->run(args.size(), av, [&] {
-        return seastar::make_ready_future<>().then([&] {
-            func();
+    int32_t exit_value;
+    std::thread handle([&] {
+        exit_value = app->run(ac, av, [&] {
+            return seastar::make_ready_future<>().then([&] {
+                func();
+            });
         });
     });
 
+    handle.join();
     free_args(av, args.size());
-
     return exit_value;
 }
 
 int32_t run_int(const std::unique_ptr<seastar::app_template>& app, const rust::Vec<rust::String>& args, rust::Fn<int()> func) {
+    int ac = args.size();
     char** av = args_as_ptr(args);
     if (av == nullptr) {
         return 1;
     }
 
-    int32_t exit_value = app->run(args.size(), av, [&] {
-        return seastar::make_ready_future<>().then([&] {
-            return func();
+    int32_t exit_value;
+    std::thread handle([&] {
+        exit_value = app->run(ac, av, [&] {
+            return seastar::make_ready_future<>().then([&] {
+                return func();
+            });
         });
     });
 
+    handle.join();
     free_args(av, args.size());
-
     return exit_value;
 }
 
