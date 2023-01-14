@@ -28,40 +28,40 @@ mod ffi {
     }
 }
 
-struct Options {
+pub struct Options {
     opts: UniquePtr<seastar_options>,
 }
 
 impl Options {
-    fn new() -> Self {
+    pub fn new() -> Self {
         Options {
             opts: new_options(),
         }
     }
 
-    fn get_name(&self) -> &str {
+    pub fn get_name(&self) -> &str {
         get_name(&self.opts)
     }
 
-    fn get_description(&self) -> &str {
+    pub fn get_description(&self) -> &str {
         get_description(&self.opts)
     }
 
     // Gets the number of threads (default: one per CPU)
-    fn get_smp(&self) -> u32 {
+    pub fn get_smp(&self) -> u32 {
         get_smp(&self.opts)
     }
 
-    fn set_name(&mut self, name: &str) {
+    pub fn set_name(&mut self, name: &str) {
         set_name(&mut self.opts, name);
     }
 
-    fn set_description(&mut self, description: &str) {
+    pub fn set_description(&mut self, description: &str) {
         set_description(&mut self.opts, description);
     }
 
     // Sets the number of threads (default: one per CPU)
-    fn set_smp(&mut self, smp: u32) {
+    pub fn set_smp(&mut self, smp: u32) {
         set_smp(&mut self.opts, smp);
     }
 }
@@ -72,22 +72,22 @@ impl Default for Options {
     }
 }
 
-struct AppTemplate {
+pub struct AppTemplate {
     app: UniquePtr<app_template>,
 }
 
 impl AppTemplate {
-    fn new_from_options(opts: Options) -> Self {
+    pub fn new_from_options(opts: Options) -> Self {
         AppTemplate {
             app: new_app_template_from_options(&opts.opts),
         }
     }
 
-    fn run_void(&self, args: &Vec<String>, func: fn()) -> i32 {
+    pub fn run_void(&self, args: &Vec<String>, func: fn()) -> i32 {
         run_void(&self.app, args, func)
     }
 
-    fn run_int(&self, args: &Vec<String>, func: fn() -> i32) -> i32 {
+    pub fn run_int(&self, args: &Vec<String>, func: fn() -> i32) -> i32 {
         run_int(&self.app, args, func)
     }
 }
