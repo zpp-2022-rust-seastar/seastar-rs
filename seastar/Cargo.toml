@@ -8,6 +8,7 @@ links = "seastar"
 
 [dependencies]
 cxx = "1"
+seastar-macros = { path = "../seastar-macros" }
 
 [dev-dependencies]
 num_cpus = "1.15.0"
