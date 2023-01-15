@@ -2,6 +2,7 @@
 
 #include <seastar/core/timer.hh>
 #include "rust/cxx.h"
+#include "clocks.hh"
 
 namespace seastar_ffi {
 namespace timer {
