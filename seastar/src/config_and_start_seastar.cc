@@ -2,6 +2,33 @@
 
 namespace seastar {
 
+// Copies rust::Vec<rust::String> as char**. Returns nullptr if fails.
+// Function free_args should be called on returned pointer to avoid memory leak.
+static char** args_as_ptr(const rust::Vec<rust::String>& args) {
+    char** av = (char**) calloc(args.size() + 1, sizeof(char*));
+    if (av == nullptr) {
+        return nullptr;
+    }
+
+    for (size_t i = 0; i < args.size(); i++) {
+        const rust::String& arg = args[i];
+        av[i] = (char*) calloc(arg.size() + 1, sizeof(char));
+        if (av[i] == nullptr) {
+            return nullptr;
+        }
+        strncpy(av[i], arg.data(), arg.size());
+    }
+
+    return av;
+}
+
+static void free_args(char** av, size_t ac) {
+    for (size_t i = 0; i < ac; i++) {
+        free(av[i]);
+    }
+    free(av);
+}
+
 std::unique_ptr<seastar_options> new_options() {
     return std::make_unique<seastar_options>();
 }
@@ -36,33 +63,6 @@ void set_smp(const std::unique_ptr<seastar_options>& opts, const uint32_t smp) {
 
 std::unique_ptr<seastar::app_template> new_app_template_from_options(const std::unique_ptr<seastar_options>& opts) {
     return std::make_unique<seastar::app_template>(std::move(*opts));
-}
-
-// Copies rust::Vec<rust::String> as char**. Returns nullptr if fails.
-// Function free_args should be called on returned pointer to avoid memory leak.
-static char** args_as_ptr(const rust::Vec<rust::String>& args) {
-    char** av = (char**) calloc(args.size() + 1, sizeof(char*));
-    if (av == nullptr) {
-        return nullptr;
-    }
-
-    for (size_t i = 0; i < args.size(); i++) {
-        const rust::String& arg = args[i];
-        av[i] = (char*) calloc(arg.size() + 1, sizeof(char));
-        if (av[i] == nullptr) {
-            return nullptr;
-        }
-        strncpy(av[i], arg.data(), arg.size());
-    }
-
-    return av;
-}
-
-static void free_args(char** av, size_t ac) {
-    for (size_t i = 0; i < ac; i++) {
-        free(av[i]);
-    }
-    free(av);
 }
 
 int32_t run_void(const std::unique_ptr<seastar::app_template>& app, const rust::Vec<rust::String>& args, rust::Fn<void()> func) {
