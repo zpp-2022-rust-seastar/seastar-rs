@@ -1,5 +1,5 @@
-use ffi::*;
 use cxx::UniquePtr;
+use ffi::*;
 
 #[cxx::bridge(namespace = "seastar")]
 mod ffi {
