@@ -23,8 +23,6 @@ pub fn test(_args: TokenStream, item: TokenStream) -> TokenStream {
     }
 
     let output = quote! {
-        use futures::executor::block_on;
-        use crate::config_and_start_seastar::{AppTemplate, Options};
         #[test]
         #(#attrs)*
         fn #name() #ret {
