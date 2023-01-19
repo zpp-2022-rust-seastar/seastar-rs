@@ -6,12 +6,14 @@ static CXX_BRIDGES: &[&str] = &[
     "src/config_and_start_seastar.rs",
     "src/api_safety.rs",
     "src/spawn.rs",
+    "src/submit_to.rs",
 ];
 
 static CXX_CPP_SOURCES: &[&str] = &[
     // Put all cpp source files into this list
     "src/config_and_start_seastar.cc",
     "src/spawn.cc",
+    "src/submit_to.cc",
 ];
 
 fn main() {
