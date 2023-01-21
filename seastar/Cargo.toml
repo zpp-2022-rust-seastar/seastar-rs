@@ -8,6 +8,7 @@ links = "seastar"
 
 [dependencies]
 cxx = "1"
+cxx-async = { git = "https://github.com/kfernandez31/cxx-async", branch = "path-fix" }
 
 [dev-dependencies]
 num_cpus = "1.15.0"
