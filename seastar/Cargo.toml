@@ -11,6 +11,9 @@ cxx = "1"
 cxx-async = { git = "https://github.com/kfernandez31/cxx-async", branch = "seastar" }
 pin-project = "1"
 
+[dev-dependencies]
+num_cpus = "1.15.0"
+
 [build-dependencies]
 cxx-build = { version = "1", features = ["parallel"] }
 pkg-config = "0.3"
