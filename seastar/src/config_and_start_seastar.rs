@@ -293,6 +293,7 @@ mod tests {
     #[test]
     fn test_run_int() {
         thread::spawn(|| {
+            let _guard = crate::acquire_guard_for_seastar_test();
             let mut app = AppTemplate::default();
             let args = vec!["test"];
             let fut = async { Ok(42) };
@@ -305,6 +306,7 @@ mod tests {
     #[test]
     fn test_run_void() {
         thread::spawn(|| {
+            let _guard = crate::acquire_guard_for_seastar_test();
             let mut app = AppTemplate::default();
             let args = vec!["test"];
             let fut = async { Ok(()) };
