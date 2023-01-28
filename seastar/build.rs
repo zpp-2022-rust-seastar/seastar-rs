@@ -3,7 +3,10 @@ use std::path::PathBuf;
 static CXX_BRIDGES: &[&str] = &[
     // Put all files that contain a cxx::bridge into this list
     "src/preempt.rs",
+    "src/config_and_start_seastar.rs",
 ];
+
+static CXX_CPP_SOURCES: &[&str] = &["src/config_and_start_seastar.cc"];
 
 fn main() {
     let seastar = pkg_config::Config::new()
@@ -43,6 +46,7 @@ fn main() {
         .flag_if_supported("-fcoroutines")
         .includes(&seastar.include_paths)
         .cpp_link_stdlib("stdc++")
+        .files(CXX_CPP_SOURCES)
         .compile("seastar-rs");
 
     println!("cargo:rerun-if-changed=build.rs");
