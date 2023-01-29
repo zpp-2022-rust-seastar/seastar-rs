@@ -40,4 +40,4 @@ jobs:
     - name: Run linter
       run: cargo clippy --verbose --examples --tests
     - name: Test
-      run: RUSTFLAGS="-C link-arg=-fuse-ld=lld" cargo test
+      run: RUSTFLAGS="-C link-arg=-fuse-ld=lld" RUSTDOCFLAGS="-C link-arg=-fuse-ld=lld" cargo test
