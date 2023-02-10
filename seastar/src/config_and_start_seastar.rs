@@ -1,7 +1,9 @@
-use crate::local_box_future::LocalBoxFuture;
+use std::future::Future;
+
 use cxx::UniquePtr;
 use ffi::*;
-use std::future::Future;
+
+use crate::cxx_async_local_future::IntoCxxAsyncLocalFuture;
 
 #[cxx::bridge(namespace = "seastar_ffi::config_and_start_seastar")]
 mod ffi {
@@ -209,11 +211,7 @@ impl AppTemplate {
         args: &[&str],
         fut: impl Future<Output = cxx_async::CxxAsyncResult<()>> + 'static,
     ) -> i32 {
-        run_void(
-            self.app.pin_mut(),
-            args,
-            VoidFuture::fallible(LocalBoxFuture::new(fut)),
-        )
+        run_void(self.app.pin_mut(), args, VoidFuture::fallible_local(fut))
     }
 
     /// Runs an app with an int (status code) callback and program arguments (argv).
@@ -236,11 +234,7 @@ impl AppTemplate {
         args: &[&str],
         fut: impl Future<Output = cxx_async::CxxAsyncResult<i32>> + 'static,
     ) -> i32 {
-        run_int(
-            self.app.pin_mut(),
-            args,
-            IntFuture::fallible(LocalBoxFuture::new(fut)),
-        )
+        run_int(self.app.pin_mut(), args, IntFuture::fallible_local(fut))
     }
 }
 
@@ -253,6 +247,7 @@ impl Default for AppTemplate {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::thread;
 
     #[test]
     fn test_new_options_contain_default_values() {
@@ -297,17 +292,27 @@ mod tests {
 
     #[test]
     fn test_run_int() {
-        let mut app = AppTemplate::default();
-        let args = vec!["test"];
-        let fut = async { Ok(42) };
-        assert_eq!(app.run_int(&args[..], fut), 42);
+        thread::spawn(|| {
+            let _guard = crate::acquire_guard_for_seastar_test();
+            let mut app = AppTemplate::default();
+            let args = vec!["test"];
+            let fut = async { Ok(42) };
+            assert_eq!(app.run_int(&args[..], fut), 42);
+        })
+        .join()
+        .unwrap();
     }
 
     #[test]
     fn test_run_void() {
-        let mut app = AppTemplate::default();
-        let args = vec!["test"];
-        let fut = async { Ok(()) };
-        assert_eq!(app.run_void(&args[..], fut), 0);
+        thread::spawn(|| {
+            let _guard = crate::acquire_guard_for_seastar_test();
+            let mut app = AppTemplate::default();
+            let args = vec!["test"];
+            let fut = async { Ok(()) };
+            assert_eq!(app.run_void(&args[..], fut), 0);
+        })
+        .join()
+        .unwrap();
     }
 }
