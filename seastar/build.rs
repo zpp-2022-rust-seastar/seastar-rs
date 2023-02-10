@@ -6,6 +6,8 @@ static CXX_BRIDGES: &[&str] = &[
     "src/config_and_start_seastar.rs",
 ];
 
+static CXX_CPP_SOURCES: &[&str] = &["src/config_and_start_seastar.cc"];
+
 fn main() {
     let seastar = pkg_config::Config::new()
         .statik(true)
@@ -44,7 +46,7 @@ fn main() {
         .flag_if_supported("-fcoroutines")
         .includes(&seastar.include_paths)
         .cpp_link_stdlib("stdc++")
-        .file("src/config_and_start_seastar.cc")
+        .files(CXX_CPP_SOURCES)
         .compile("seastar-rs");
 
     println!("cargo:rerun-if-changed=build.rs");

@@ -1,31 +1,39 @@
-use ffi::*;
-use cxx::UniquePtr;
+use std::future::Future;
 
-#[cxx::bridge(namespace = "seastar")]
+use cxx::UniquePtr;
+use ffi::*;
+
+use crate::cxx_async_local_future::IntoCxxAsyncLocalFuture;
+
+#[cxx::bridge(namespace = "seastar_ffi::config_and_start_seastar")]
 mod ffi {
     unsafe extern "C++" {
         include!("seastar/src/config_and_start_seastar.hh");
+
         type seastar_options;
         type app_template;
+
+        type VoidFuture = crate::cxx_async_futures::VoidFuture;
+        type IntFuture = crate::cxx_async_futures::IntFuture;
 
         // Returns a pointer to default `seastar_options`
         fn new_options() -> UniquePtr<seastar_options>;
         // Getters
-        fn get_name(opts: &UniquePtr<seastar_options>) -> &str;
-        fn get_description(opts: &UniquePtr<seastar_options>) -> &str;
-        fn get_smp(opts: &UniquePtr<seastar_options>) -> u32;
+        fn get_name(opts: &seastar_options) -> &str;
+        fn get_description(opts: &seastar_options) -> &str;
+        fn get_smp(opts: &seastar_options) -> u32;
         // Setters
-        fn set_name(opts: &UniquePtr<seastar_options>, name: &str);
-        fn set_description(opts: &UniquePtr<seastar_options>, description: &str);
-        fn set_smp(opts: &UniquePtr<seastar_options>, smp: u32);
+        fn set_name(opts: Pin<&mut seastar_options>, name: &str);
+        fn set_description(opts: Pin<&mut seastar_options>, description: &str);
+        fn set_smp(opts: Pin<&mut seastar_options>, smp: u32);
 
         // Returns a pointer to an `app_template` instance
         fn new_app_template_from_options(
-            opts: &UniquePtr<seastar_options>,
+            opts: Pin<&mut seastar_options>,
         ) -> UniquePtr<app_template>;
         // These run the app
-        fn run_void(app: &UniquePtr<app_template>, args: &Vec<String>, func: fn()) -> i32;
-        fn run_int(app: &UniquePtr<app_template>, args: &Vec<String>, func: fn() -> i32) -> i32;
+        fn run_void(app: Pin<&mut app_template>, args: &[&str], fut: VoidFuture) -> i32;
+        fn run_int(app: Pin<&mut app_template>, args: &[&str], fut: IntFuture) -> i32;
     }
 }
 
@@ -117,7 +125,7 @@ impl Options {
     /// assert_eq!(opts.get_name(), name);
     /// ```
     pub fn set_name(&mut self, name: &str) {
-        set_name(&self.opts, name);
+        set_name(self.opts.pin_mut(), name);
     }
 
     /// Sets the `Options`' description.
@@ -134,7 +142,7 @@ impl Options {
     /// assert_eq!(opts.get_description(), description);
     /// ```
     pub fn set_description(&mut self, description: &str) {
-        set_description(&self.opts, description);
+        set_description(self.opts.pin_mut(), description);
     }
 
     /// Sets the `Options`' number of threads.
@@ -151,7 +159,7 @@ impl Options {
     /// assert_eq!(opts.get_smp(), smp);
     /// ```
     pub fn set_smp(&mut self, smp: u32) {
-        set_smp(&self.opts, smp);
+        set_smp(self.opts.pin_mut(), smp);
     }
 }
 
@@ -177,9 +185,9 @@ impl AppTemplate {
     ///
     /// let app = AppTemplate::new_from_options(Options::default());
     /// ```
-    pub fn new_from_options(opts: Options) -> Self {
+    pub fn new_from_options(mut opts: Options) -> Self {
         AppTemplate {
-            app: new_app_template_from_options(&opts.opts),
+            app: new_app_template_from_options(opts.opts.pin_mut()),
         }
     }
 
@@ -191,15 +199,19 @@ impl AppTemplate {
     /// ```rust
     /// use seastar::{AppTemplate, Options};
     ///
-    /// let func = || { println!("{}", 42); };
+    /// let fut = async move { Ok(()) };
     ///
-    /// let app = AppTemplate::default();
-    /// let args = vec!["hello".to_owned()];
+    /// let mut app = AppTemplate::default();
+    /// let args = vec!["hello"];
     ///
-    /// assert_eq!(app.run_void(&args, func), 0);
+    /// assert_eq!(app.run_void(&args[..], fut), 0);
     /// ```
-    pub fn run_void(&self, args: &Vec<String>, func: fn()) -> i32 {
-        run_void(&self.app, args, func)
+    pub fn run_void(
+        &mut self,
+        args: &[&str],
+        fut: impl Future<Output = cxx_async::CxxAsyncResult<()>> + 'static,
+    ) -> i32 {
+        run_void(self.app.pin_mut(), args, VoidFuture::fallible_local(fut))
     }
 
     /// Runs an app with an int (status code) callback and program arguments (argv).
@@ -210,15 +222,19 @@ impl AppTemplate {
     /// ```rust
     /// use seastar::{AppTemplate, Options};
     ///
-    /// let func = || { 42 };
+    /// let fut = async move { Ok(42) };
     ///
-    /// let app = AppTemplate::default();
-    /// let args = vec!["hello".to_owned()];
+    /// let mut app = AppTemplate::default();
+    /// let args = vec!["hello"];
     ///
-    /// assert_eq!(app.run_int(&args, func), 42);
+    /// assert_eq!(app.run_int(&args[..], fut), 42);
     /// ```
-    pub fn run_int(&self, args: &Vec<String>, func: fn() -> i32) -> i32 {
-        run_int(&self.app, args, func)
+    pub fn run_int(
+        &mut self,
+        args: &[&str],
+        fut: impl Future<Output = cxx_async::CxxAsyncResult<i32>> + 'static,
+    ) -> i32 {
+        run_int(self.app.pin_mut(), args, IntFuture::fallible_local(fut))
     }
 }
 
@@ -227,14 +243,11 @@ impl Default for AppTemplate {
         AppTemplate::new_from_options(Options::default())
     }
 }
-/*
-RUSTFLAGS="-C link-arg=-fuse-ld=lld" \
-RUSTDOCFLAGS="-C link-arg=-fuse-ld=lld" \
-cargo test
-*/
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::thread;
 
     #[test]
     fn test_new_options_contain_default_values() {
@@ -279,19 +292,27 @@ mod tests {
 
     #[test]
     fn test_run_int() {
-        let app = AppTemplate::default();
-        let args = vec![String::from("test")];
-        fn func() -> i32 {
-            42
-        }
-        assert_eq!(app.run_int(&args, func), 42);
+        thread::spawn(|| {
+            let _guard = crate::acquire_guard_for_seastar_test();
+            let mut app = AppTemplate::default();
+            let args = vec!["test"];
+            let fut = async { Ok(42) };
+            assert_eq!(app.run_int(&args[..], fut), 42);
+        })
+        .join()
+        .unwrap();
     }
 
     #[test]
     fn test_run_void() {
-        let app = AppTemplate::default();
-        let args = vec![String::from("test")];
-        fn func() {}
-        assert_eq!(app.run_void(&args, func), 0);
+        thread::spawn(|| {
+            let _guard = crate::acquire_guard_for_seastar_test();
+            let mut app = AppTemplate::default();
+            let args = vec!["test"];
+            let fut = async { Ok(()) };
+            assert_eq!(app.run_void(&args[..], fut), 0);
+        })
+        .join()
+        .unwrap();
     }
 }
