@@ -10,6 +10,7 @@ links = "seastar"
 cxx = "1"
 cxx-async = { git = "https://github.com/kfernandez31/cxx-async", branch = "seastar" }
 pin-project = "1"
+seastar-macros = { path = "../seastar-macros" }
 
 [dev-dependencies]
 num_cpus = "1.15.0"
