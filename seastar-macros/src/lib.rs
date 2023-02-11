@@ -40,3 +40,58 @@ pub fn test(_args: TokenStream, item: TokenStream) -> TokenStream {
 
     output.into()
 }
+
+#[proc_macro_attribute]
+#[cfg(not(test))] // Work around for rust-lang/rust#62127
+pub fn main(args: TokenStream, item: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(item as ItemFn);
+    let args = syn::parse_macro_input!(args as syn::AttributeArgs);
+
+    let inputs = &input.sig.inputs;
+    let name = &input.sig.ident;
+    let body = &input.block;
+    let attrs = &input.attrs;
+
+    if input.sig.asyncness.is_none() {
+        let msg = "the async keyword is missing from the function declaration";
+        return syn::Error::new_spanned(&input.sig.fn_token, msg)
+            .to_compile_error()
+            .into();
+    }
+
+    if name != "main" {
+        let msg = "only the main function is allowed to use #[seastar::main]";
+        return syn::Error::new_spanned(&input.sig.inputs, msg)
+            .to_compile_error()
+            .into();
+    }
+
+    if !inputs.is_empty() {
+        let msg = "the main function cannot accept arguments";
+        return syn::Error::new_spanned(&input.sig.inputs, msg)
+            .to_compile_error()
+            .into();
+    }
+
+    if !args.is_empty() {
+        let msg = "arguments for #[seastar::main] are not supported yet";
+        return syn::Error::new_spanned(&input.sig.inputs, msg)
+            .to_compile_error()
+            .into();
+    }
+
+    let output = quote! {
+        #(#attrs)*
+        fn main() {
+            let mut app = seastar::AppTemplate::default();
+            let args = vec!["test"]; // TODO: replace with actual args
+            let fut = async {
+                #body
+                Ok(())
+            };
+            app.run_void(&args[..], fut);
+        }
+    };
+
+    output.into()
+}
