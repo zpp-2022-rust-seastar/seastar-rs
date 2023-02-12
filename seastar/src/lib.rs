@@ -34,3 +34,25 @@ pub use preempt::*;
 /// }
 /// ```
 pub use seastar_macros::test;
+
+/// A macro that runs the `main` function's contents
+/// in Seastar's runtime.
+///
+/// **Only** `main` is allowed to use this macro -
+/// Seastar apps may only use one `AppTemplate`
+/// instance at a time.
+///
+/// # Options
+///
+/// Currently, passing options is not supported.
+/// The app is simply run with default parameters.
+///
+/// # Usage
+///
+/// ```rust
+/// #[seastar::main]
+/// async fn main() {
+///     println!("Hello, world!");
+/// }
+/// ```
+pub use seastar_macros::main;
