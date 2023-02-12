@@ -12,6 +12,7 @@ mod ffi_utils;
 mod file;
 mod gate;
 mod preempt;
+mod scheduling;
 #[doc(hidden)]
 pub mod seastar_test_guard;
 mod sleep;
@@ -30,6 +31,7 @@ pub use distributed::*;
 pub use file::*;
 pub use gate::*;
 pub use preempt::*;
+pub use scheduling::*;
 pub use sleep::*;
 pub use smp::*;
 pub use spawn::*;
