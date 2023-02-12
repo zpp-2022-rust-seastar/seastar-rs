@@ -9,6 +9,7 @@ static CXX_BRIDGES: &[&str] = &[
     "src/submit_to.rs",
     "src/gate.rs",
     "src/clocks.rs",
+    "src/scheduling.rs",
 ];
 
 static CXX_CPP_SOURCES: &[&str] = &[
@@ -20,6 +21,7 @@ static CXX_CPP_SOURCES: &[&str] = &[
     "src/clocks.cc",
     "src/sleep.cc",
     "src/timer.cc",
+    "src/scheduling.cc",
 ];
 
 fn main() {

@@ -10,6 +10,7 @@ mod cxx_async_local_future;
 mod ffi_utils;
 mod gate;
 mod preempt;
+mod scheduling;
 #[cfg(test)]
 pub(crate) mod seastar_test_guard;
 mod sleep;
@@ -25,6 +26,7 @@ pub use clocks::*;
 pub use config_and_start_seastar::*;
 pub use gate::*;
 pub use preempt::*;
+pub use scheduling::*;
 pub use sleep::*;
 pub use spawn::*;
 pub use submit_to::*;
