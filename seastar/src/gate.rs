@@ -10,8 +10,12 @@ mod ffi {
         type gate;
         type gate_holder;
 
+        #[namespace = "seastar_ffi"]
+        type VoidFuture = crate::cxx_async_futures::VoidFuture;
+
         fn new_gate() -> UniquePtr<gate>;
         fn new_gate_holder(gate: &UniquePtr<gate>) -> Result<UniquePtr<gate_holder>>;
+        fn close_gate(gate: &UniquePtr<gate>) -> VoidFuture;
     }
 }
 
@@ -50,6 +54,16 @@ impl Gate {
     /// If it fails, it returns [`GateClosedError`].
     pub fn try_enter(&self) -> Result<GateHolder, GateClosedError> {
         GateHolder::new(&self.inner)
+    }
+
+    /// Closes the gate.
+    ///
+    /// It must be called at most once (the underlying implementation aborts if it is closed twice).
+    ///
+    /// Returns a future that resolves after everybody have left the gate.
+    pub async fn close(&self) {
+        crate::assert_runtime_is_running();
+        close_gate(&self.inner).await.unwrap();
     }
 }
 
