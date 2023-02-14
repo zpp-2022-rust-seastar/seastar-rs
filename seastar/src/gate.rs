@@ -88,3 +88,97 @@ impl<'a> GateHolder<'a> {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate as seastar;
+    use futures::join;
+    use std::{cell::RefCell, rc::Rc};
+
+    #[seastar::test]
+    async fn test_gate_only_close() {
+        let gate = Gate::new();
+        gate.close().await;
+    }
+
+    #[seastar::test]
+    async fn test_gate_leave_then_close() {
+        let gate = Gate::new();
+
+        {
+            let _ = gate.try_enter().unwrap();
+        }
+
+        gate.close().await;
+    }
+
+    #[seastar::test]
+    async fn test_gate_close_then_leave() {
+        let gate = Gate::new();
+
+        let closing_started = Rc::new(RefCell::new(false));
+        let closing_finished = Rc::new(RefCell::new(false));
+
+        let handler = gate.try_enter().unwrap();
+        let leave_future = async {
+            drop(handler);
+            assert!(*closing_started.borrow() && !*closing_finished.borrow());
+        };
+
+        let close_future = async {
+            *closing_started.borrow_mut() = true;
+            gate.close().await;
+            *closing_finished.borrow_mut() = true;
+        };
+
+        // join! tries to finish close_future first.
+        join!(close_future, leave_future);
+        assert!(*closing_finished.borrow());
+    }
+
+    #[seastar::test]
+    async fn test_gate_many_leave() {
+        let gate = Gate::new();
+
+        let closing_finished = Rc::new(RefCell::new(false));
+
+        let handler1 = gate.try_enter().unwrap();
+        let leave_future1 = async {
+            drop(handler1);
+            assert!(!*closing_finished.borrow());
+        };
+
+        let handler2 = gate.try_enter().unwrap();
+        let leave_future2 = async {
+            drop(handler2);
+            assert!(!*closing_finished.borrow());
+        };
+
+        let handler3 = gate.try_enter().unwrap();
+        let leave_future3 = async {
+            drop(handler3);
+            assert!(!*closing_finished.borrow());
+        };
+
+        let close_future = async {
+            gate.close().await;
+            *closing_finished.borrow_mut() = true;
+        };
+
+        join!(leave_future1, close_future, leave_future2, leave_future3);
+        assert!(*closing_finished.borrow());
+    }
+
+    #[seastar::test]
+    async fn test_gate_close_then_enter() {
+        let gate = Gate::new();
+
+        gate.close().await;
+
+        match gate.try_enter() {
+            Err(GateClosedError) => (),
+            _ => panic!("gate.try_enter() should return Err(GateClosedError)."),
+        }
+    }
+}
