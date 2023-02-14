@@ -1,4 +1,6 @@
 use cxx::UniquePtr;
+use std::marker::PhantomData;
+use thiserror::Error;
 
 #[cxx::bridge(namespace = "seastar_ffi::gate")]
 mod ffi {
@@ -6,12 +8,19 @@ mod ffi {
         include!("seastar/src/gate.hh");
 
         type gate;
+        type gate_holder;
 
         fn new_gate() -> UniquePtr<gate>;
+        fn new_gate_holder(gate: &UniquePtr<gate>) -> Result<UniquePtr<gate_holder>>;
     }
 }
 
 use ffi::*;
+
+/// Error returned by [`try_enter`](Gate::try_enter) when called on closed gate.
+#[derive(Error, Debug)]
+#[error("GateClosedError: gate closed")]
+pub struct GateClosedError;
 
 /// Facility to stop new requests, and to tell when existing requests are done.
 ///
@@ -32,5 +41,36 @@ impl Gate {
     /// Creates a new gate.
     pub fn new() -> Self {
         Gate { inner: new_gate() }
+    }
+
+    /// Tries to enter the gate.
+    ///
+    /// If it succeeds, it returns [`GateHolder`] that will leave the gate when destroyed (RAII).
+    ///
+    /// If it fails, it returns [`GateClosedError`].
+    pub fn try_enter(&self) -> Result<GateHolder, GateClosedError> {
+        GateHolder::new(&self.inner)
+    }
+}
+
+/// Facility to hold a gate opened using RAII.
+///
+/// A [`GateHolder`] is obtained when [`try_enter`](Gate::try_enter) succeeds.
+///
+/// The [`Gate`] is left when the [`GateHolder`] is dropped.
+pub struct GateHolder<'a> {
+    _inner: UniquePtr<gate_holder>,
+    _phantom: PhantomData<&'a ()>,
+}
+
+impl<'a> GateHolder<'a> {
+    fn new(gate: &'a UniquePtr<gate>) -> Result<Self, GateClosedError> {
+        match new_gate_holder(gate) {
+            Ok(holder) => Ok(GateHolder {
+                _inner: holder,
+                _phantom: PhantomData,
+            }),
+            Err(_) => Err(GateClosedError),
+        }
     }
 }
