@@ -1,3 +1,4 @@
+use crate::cxx_async_futures::VoidFuture;
 use core::cmp::Ordering;
 use std::fmt;
 use std::hash::{Hash, Hasher};
@@ -6,6 +7,11 @@ use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssi
 
 #[cxx::bridge]
 mod ffi {
+    #[namespace = "seastar_ffi"]
+    unsafe extern "C++" {
+        type VoidFuture = crate::cxx_async_futures::VoidFuture;
+    }
+
     #[namespace = "seastar_ffi::clocks"]
     unsafe extern "C++" {
         include!("seastar/src/clocks.hh");
@@ -17,6 +23,17 @@ mod ffi {
         fn manual_clock_now() -> i64;
 
         fn manual_clock_advance(duration: i64);
+    }
+
+    #[namespace = "seastar_ffi::sleep"]
+    unsafe extern "C++" {
+        include!("seastar/src/sleep.hh");
+
+        fn steady_sleep(nanos: i64) -> VoidFuture;
+
+        fn lowres_sleep(nanos: i64) -> VoidFuture;
+
+        fn manual_sleep(nanos: i64) -> VoidFuture;
     }
 }
 
@@ -449,15 +466,17 @@ impl<ClockType> Sub for Instant<ClockType> {
     }
 }
 
-mod clock_implemantation {
+mod clock_implementation {
     use super::*;
 
     // Hidden trait containing all clock specific ffi functions.
-    pub trait ClockImpl: Sized {}
+    pub trait ClockImpl: Sized {
+        fn sleep(nanos: i64) -> VoidFuture;
+    }
 }
 
 /// Trait implemented by: [`SteadyClock`], [`LowresClock`], [`ManualClock`].
-pub trait Clock: clock_implemantation::ClockImpl {
+pub trait Clock: clock_implementation::ClockImpl {
     /// Returns an instant representing the current value of the clock.
     fn now() -> Instant<Self>;
 }
@@ -465,7 +484,11 @@ pub trait Clock: clock_implemantation::ClockImpl {
 /// Wrapper on `std::chrono::steady_clock`.
 pub struct SteadyClock;
 
-impl clock_implemantation::ClockImpl for SteadyClock {}
+impl clock_implementation::ClockImpl for SteadyClock {
+    fn sleep(nanos: i64) -> VoidFuture {
+        steady_sleep(nanos)
+    }
+}
 
 impl Clock for SteadyClock {
     fn now() -> Instant<SteadyClock> {
@@ -484,7 +507,11 @@ impl Clock for SteadyClock {
 /// compared to [`SteadyClock`].
 pub struct LowresClock;
 
-impl clock_implemantation::ClockImpl for LowresClock {}
+impl clock_implementation::ClockImpl for LowresClock {
+    fn sleep(nanos: i64) -> VoidFuture {
+        lowres_sleep(nanos)
+    }
+}
 
 impl Clock for LowresClock {
     fn now() -> Instant<LowresClock> {
@@ -497,7 +524,11 @@ impl Clock for LowresClock {
 /// Equivalent of `seastar::manual_clock`.
 pub struct ManualClock;
 
-impl clock_implemantation::ClockImpl for ManualClock {}
+impl clock_implementation::ClockImpl for ManualClock {
+    fn sleep(nanos: i64) -> VoidFuture {
+        manual_sleep(nanos)
+    }
+}
 
 impl Clock for ManualClock {
     fn now() -> Instant<ManualClock> {
