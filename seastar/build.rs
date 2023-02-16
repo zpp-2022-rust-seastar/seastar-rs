@@ -4,6 +4,7 @@ static CXX_BRIDGES: &[&str] = &[
     // Put all files that contain a cxx::bridge into this list
     "src/preempt.rs",
     "src/config_and_start_seastar.rs",
+    "src/api_safety.rs",
 ];
 
 static CXX_CPP_SOURCES: &[&str] = &["src/config_and_start_seastar.cc"];
