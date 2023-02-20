@@ -1,3 +1,5 @@
+#pragma once
+
 #include "rust/cxx.h"
 #include "cxx-async/include/rust/cxx_async.h"
 #include "cxx-async/include/rust/cxx_async_seastar.h"
