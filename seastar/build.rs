@@ -18,6 +18,7 @@ static CXX_CPP_SOURCES: &[&str] = &[
     "src/submit_to.cc",
     "src/gate.cc",
     "src/clocks.cc",
+    "src/sleep.cc",
 ];
 
 fn main() {

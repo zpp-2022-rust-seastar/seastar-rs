@@ -12,6 +12,7 @@ mod gate;
 mod preempt;
 #[cfg(test)]
 pub(crate) mod seastar_test_guard;
+mod sleep;
 mod spawn;
 mod submit_to;
 
@@ -23,6 +24,7 @@ pub use clocks::*;
 pub use config_and_start_seastar::*;
 pub use gate::*;
 pub use preempt::*;
+pub use sleep::*;
 pub use spawn::*;
 pub use submit_to::*;
 
