@@ -35,6 +35,7 @@ mod ffi {
     }
 }
 
+pub(crate) use ffi::scheduling_group;
 use ffi::*;
 
 /// Identifies function calls that are accounted as a group.

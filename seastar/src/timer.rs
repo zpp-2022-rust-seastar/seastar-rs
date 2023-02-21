@@ -1,5 +1,6 @@
 use crate::assert_runtime_is_running;
 use crate::ffi_utils::{get_dropper, get_fn_mut_void_caller};
+use crate::SchedulingGroup;
 use crate::{Clock, Duration, Instant};
 use std::marker::PhantomData;
 
@@ -91,6 +92,23 @@ impl<ClockType: Clock> Timer<ClockType> {
         let dropper = get_dropper(&callback);
         let boxed_callback = Box::into_raw(Box::new(callback)) as *mut u8;
         ClockType::set_callback(&mut self.inner, boxed_callback, caller, dropper);
+    }
+
+    /// Sets the callback function to be called under specified group when
+    /// the timer expires.
+    ///
+    /// # Arguments
+    /// * `callback` - The callback to be executed when the timer expires.
+    /// * `sg` - The scheduling group under which the callback will be executed.
+    pub fn set_callback_under_group<Func: FnMut() + 'static>(
+        &mut self,
+        callback: Func,
+        sg: &SchedulingGroup,
+    ) {
+        let caller = get_fn_mut_void_caller(&callback);
+        let dropper = get_dropper(&callback);
+        let boxed_callback = Box::into_raw(Box::new(callback)) as *mut u8;
+        ClockType::set_callback_under_group(&mut self.inner, boxed_callback, caller, dropper, &sg);
     }
 
     /// Sets the timer expiration time.
