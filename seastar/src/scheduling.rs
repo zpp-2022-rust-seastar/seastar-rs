@@ -157,3 +157,72 @@ impl SchedulingGroup {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate as seastar;
+
+    #[seastar::test]
+    async fn test_scheduling_group_main_group() {
+        let sg = SchedulingGroup::default();
+        assert!(sg.active());
+        assert!(sg.is_main());
+        assert_eq!("main", sg.name());
+    }
+
+    #[seastar::test]
+    async fn test_scheduling_group_set_shares() {
+        let sg1 = SchedulingGroup::default();
+        sg1.set_shares(1.);
+        sg1.set_shares(1000.);
+        sg1.set_shares(1000_000_000.);
+
+        let sg2 = SchedulingGroup::create("sg2", 100.).await;
+        sg2.set_shares(1.);
+        sg2.set_shares(1000.);
+        sg2.set_shares(1000_000_000.);
+    }
+
+    #[seastar::test]
+    async fn test_scheduling_group_create() {
+        let sg1 = SchedulingGroup::create("sg1", 100.).await;
+        assert!(!sg1.active());
+        assert!(!sg1.is_main());
+        assert_eq!("sg1", sg1.name());
+
+        let sg2 = SchedulingGroup::create("sg2", 200.).await;
+        assert!(!sg2.active());
+        assert!(!sg2.is_main());
+        assert_eq!("sg2", sg2.name());
+
+        assert!(sg1 != sg2);
+    }
+
+    #[seastar::test]
+    async fn test_scheduling_group_destroy() {
+        let sg = SchedulingGroup::create("sg", 100.).await;
+        unsafe {
+            sg.destroy().await;
+        }
+    }
+
+    #[seastar::test]
+    async fn test_scheduling_group_rename() {
+        let sg = SchedulingGroup::create("sg1", 100.).await;
+        assert_eq!("sg1", sg.name());
+
+        sg.rename("sg2").await;
+        assert_eq!("sg2", sg.name());
+    }
+
+    #[test]
+    fn test_scheduling_group_max() {
+        assert!(SchedulingGroup::max() > 0);
+    }
+
+    #[test]
+    fn test_scheduling_group_current() {
+        assert!(SchedulingGroup::default() == SchedulingGroup::current());
+    }
+}
