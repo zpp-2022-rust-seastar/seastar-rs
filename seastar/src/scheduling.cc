@@ -43,5 +43,14 @@ VoidFuture rename_sg(const std::shared_ptr<scheduling_group>& sg, rust::str new_
     co_await seastar::rename_scheduling_group(*sg, s_name);
 }
 
+uint32_t max_sg() {
+    return (uint32_t) seastar::max_scheduling_groups();
+}
+
+std::shared_ptr<scheduling_group> current_sg() {
+    scheduling_group sg = seastar::current_scheduling_group();
+    return std::make_shared<scheduling_group>(std::move(sg));
+}
+
 } // namespace scheduling
 } // namespace seastar_ffi

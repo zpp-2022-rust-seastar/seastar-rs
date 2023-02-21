@@ -26,5 +26,9 @@ VoidFuture destroy_sg(const std::shared_ptr<scheduling_group>& sg);
 
 VoidFuture rename_sg(const std::shared_ptr<scheduling_group>& sg, rust::str new_name);
 
+uint32_t max_sg();
+
+std::shared_ptr<scheduling_group> current_sg();
+
 } // namespace scheduling
 } // namespace seastar_ffi

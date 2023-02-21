@@ -28,6 +28,10 @@ mod ffi {
         fn destroy_sg(sg: &SharedPtr<scheduling_group>) -> VoidFuture;
 
         fn rename_sg(sg: &SharedPtr<scheduling_group>, new_name: &str) -> VoidFuture;
+
+        fn max_sg() -> u32;
+
+        fn current_sg() -> SharedPtr<scheduling_group>;
     }
 }
 
@@ -138,5 +142,18 @@ impl SchedulingGroup {
     pub async fn rename(&self, new_name: &str) {
         assert_runtime_is_running();
         rename_sg(&self.inner, new_name).await.unwrap();
+    }
+
+    /// Returns the maximal number of scheduling groups defined by
+    /// `SEASTAR_SCHEDULING_GROUPS_COUNT`.
+    pub fn max() -> u32 {
+        max_sg()
+    }
+
+    /// Returns the current scheduling group.
+    pub fn current() -> Self {
+        SchedulingGroup {
+            inner: current_sg(),
+        }
     }
 }
