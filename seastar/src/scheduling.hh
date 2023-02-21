@@ -20,5 +20,11 @@ void sg_set_shares(const std::shared_ptr<scheduling_group>& sg, float shares);
 
 bool sg_equal(const scheduling_group& sg1, const scheduling_group& sg2);
 
+VoidFuture create_sg(std::shared_ptr<scheduling_group>& sg, rust::str name, float shares);
+
+VoidFuture destroy_sg(const std::shared_ptr<scheduling_group>& sg);
+
+VoidFuture rename_sg(const std::shared_ptr<scheduling_group>& sg, rust::str new_name);
+
 } // namespace scheduling
 } // namespace seastar_ffi

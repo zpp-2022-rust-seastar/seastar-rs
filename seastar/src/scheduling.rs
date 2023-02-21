@@ -8,6 +8,9 @@ mod ffi {
 
         type scheduling_group;
 
+        #[namespace = "seastar_ffi"]
+        type VoidFuture = crate::cxx_async_futures::VoidFuture;
+
         fn new_sg() -> SharedPtr<scheduling_group>;
 
         fn sg_active(sg: &scheduling_group) -> bool;
@@ -19,6 +22,12 @@ mod ffi {
         fn sg_set_shares(sg: &SharedPtr<scheduling_group>, shares: f32);
 
         fn sg_equal(sg1: &scheduling_group, sg2: &scheduling_group) -> bool;
+
+        fn create_sg(sg: &mut SharedPtr<scheduling_group>, name: &str, shares: f32) -> VoidFuture;
+
+        fn destroy_sg(sg: &SharedPtr<scheduling_group>) -> VoidFuture;
+
+        fn rename_sg(sg: &SharedPtr<scheduling_group>, new_name: &str) -> VoidFuture;
     }
 }
 
@@ -81,5 +90,53 @@ impl SchedulingGroup {
     pub fn set_shares(&self, shares: f32) {
         assert_runtime_is_running();
         sg_set_shares(&self.inner, shares);
+    }
+
+    /// Creates a scheduling group with a specified number of shares.
+    ///
+    /// The operation is global and affects all shards. The returned scheduling
+    /// group can then be used in any shard.
+    ///
+    /// # Arguments
+    /// * `name` - A name that identifiers the group; will be used as a label in the
+    ///    group's metrics.
+    /// * `shares` - The number of shares of the CPU time allotted to the group;
+    ///    Use numbers in the 1-1000 range (but can go above).
+    pub async fn create(name: &str, shares: f32) -> Self {
+        assert_runtime_is_running();
+        let mut sg = SharedPtr::null();
+        create_sg(&mut sg, name, shares).await.unwrap();
+        SchedulingGroup { inner: sg }
+    }
+
+    /// Destroys a scheduling group.
+    ///
+    /// Destroys a scheduling group previously created with
+    /// [`create`](SchedulingGroup::create).
+    ///
+    /// The destroyed group must not be currently in use
+    /// and must not be used or destroyed again later.
+    ///
+    /// The operation is global and affects all shards.
+    ///
+    /// Returns a future that is ready when the scheduling group has been torn down.
+    pub async unsafe fn destroy(&self) {
+        assert_runtime_is_running();
+        destroy_sg(&self.inner).await.unwrap();
+    }
+
+    /// Renames scheduling group.
+    ///
+    /// Renames a scheduling group previously created with
+    /// [`create`](SchedulingGroup::create). The operation is global and affects all
+    /// shards. The operation affects the exported statistics labels.
+    ///
+    /// Returns a future that is ready when the scheduling group has been renamed.
+    ///
+    /// # Arguments
+    /// * `new_name` - The new name for the scheduling group.
+    pub async fn rename(&self, new_name: &str) {
+        assert_runtime_is_running();
+        rename_sg(&self.inner, new_name).await.unwrap();
     }
 }
