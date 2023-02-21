@@ -24,5 +24,9 @@ void sg_set_shares(const std::shared_ptr<scheduling_group>& sg, float shares) {
     sg->set_shares(shares);
 }
 
+bool sg_equal(const scheduling_group& sg1, const scheduling_group& sg2) {
+    return sg1 == sg2;
+}
+
 } // namespace scheduling
 } // namespace seastar_ffi

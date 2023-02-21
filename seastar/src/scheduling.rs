@@ -17,6 +17,8 @@ mod ffi {
         fn sg_is_main(sg: &scheduling_group) -> bool;
 
         fn sg_set_shares(sg: &SharedPtr<scheduling_group>, shares: f32);
+
+        fn sg_equal(sg1: &scheduling_group, sg2: &scheduling_group) -> bool;
     }
 }
 
@@ -37,6 +39,14 @@ impl Default for SchedulingGroup {
         SchedulingGroup { inner: new_sg() }
     }
 }
+
+impl PartialEq for SchedulingGroup {
+    fn eq(&self, other: &Self) -> bool {
+        sg_equal(&self.inner, &other.inner)
+    }
+}
+
+impl Eq for SchedulingGroup {}
 
 impl SchedulingGroup {
     /// Checks if the group is active.
