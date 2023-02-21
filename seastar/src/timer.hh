@@ -7,6 +7,8 @@
 namespace seastar_ffi {
 namespace timer {
 
+using scheduling_group = seastar::scheduling_group;
+
 namespace steady_clock {
 
 using steady_clock_timer = seastar::timer<seastar::steady_clock_type>;
@@ -18,6 +20,14 @@ void sct_set_callback(
     uint8_t* callback, // uint8_t is a substitute for void that isn't supported by cxx.
     rust::Fn<void(uint8_t*)> caller,
     rust::Fn<void(uint8_t*)> dropper
+);
+
+void sct_set_callback_under_group(
+    steady_clock_timer& timer,
+    uint8_t* callback,
+    rust::Fn<void(uint8_t*)> caller,
+    rust::Fn<void(uint8_t*)> dropper,
+    const scheduling_group& sg
 );
 
 void sct_arm_at(steady_clock_timer& timer, int64_t at);
@@ -49,6 +59,14 @@ void lct_set_callback(
     rust::Fn<void(uint8_t*)> dropper
 );
 
+void lct_set_callback_under_group(
+    lowres_clock_timer& timer,
+    uint8_t* callback,
+    rust::Fn<void(uint8_t*)> caller,
+    rust::Fn<void(uint8_t*)> dropper,
+    const scheduling_group& sg
+);
+
 void lct_arm_at(lowres_clock_timer& timer, int64_t at);
 
 void lct_arm_at_periodic(lowres_clock_timer& timer, int64_t ay, int64_t period);
@@ -76,6 +94,14 @@ void mct_set_callback(
     uint8_t* callback, // uint8_t is a substitute for void that isn't supported by cxx.
     rust::Fn<void(uint8_t*)> caller,
     rust::Fn<void(uint8_t*)> dropper
+);
+
+void mct_set_callback_under_group(
+    manual_clock_timer& timer,
+    uint8_t* callback,
+    rust::Fn<void(uint8_t*)> caller,
+    rust::Fn<void(uint8_t*)> dropper,
+    const scheduling_group& sg
 );
 
 void mct_arm_at(manual_clock_timer& timer, int64_t at);
