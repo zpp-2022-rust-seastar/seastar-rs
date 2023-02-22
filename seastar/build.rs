@@ -5,9 +5,14 @@ static CXX_BRIDGES: &[&str] = &[
     "src/preempt.rs",
     "src/config_and_start_seastar.rs",
     "src/api_safety.rs",
+    "src/spawn.rs",
 ];
 
-static CXX_CPP_SOURCES: &[&str] = &["src/config_and_start_seastar.cc"];
+static CXX_CPP_SOURCES: &[&str] = &[
+    // Put all cpp source files into this list
+    "src/config_and_start_seastar.cc",
+    "src/spawn.cc",
+];
 
 fn main() {
     let seastar = pkg_config::Config::new()
