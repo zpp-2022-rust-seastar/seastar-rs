@@ -46,3 +46,44 @@ where
         Err(_) => panic!(),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[seastar::test]
+    async fn test_empty_spawn_void() {
+        assert!(matches!(spawn(async move {}).await, ()));
+    }
+
+    #[seastar::test]
+    async fn test_chained_spawn_void() {
+        let res = spawn(async move {
+            let _ = spawn(async move {}).await;
+        })
+        .await;
+        assert!(matches!(res, ()));
+    }
+
+    #[seastar::test]
+    async fn test_spawn_int() {
+        let res = spawn(async move { 0 }).await;
+        assert!(matches!(res, 0));
+    }
+
+    #[seastar::test]
+    async fn test_two_spawn_int_and_void() {
+        let mut res = spawn(async move { 0 }).await;
+        assert!(matches!(res, 0));
+        res = spawn(async move { 1 }).await;
+        assert!(matches!(res, 1));
+        assert!(matches!(spawn(async move {}).await, ()));
+        assert!(matches!(spawn(async move {}).await, ()));
+    }
+
+    #[seastar::test]
+    async fn test_chained_spawn_int() {
+        let res = spawn(async move { spawn(async move { 2 }).await }).await;
+        assert!(matches!(res, 2));
+    }
+}
