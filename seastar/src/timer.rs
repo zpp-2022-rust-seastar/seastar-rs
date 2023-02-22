@@ -304,6 +304,24 @@ mod tests {
                 }
 
                 #[seastar::test]
+                async fn [<test_ $timer _set_callback_under_group>]() {
+                    let mut timer = Timer::<$Clock>::new();
+
+                    let calls = Rc::new(RefCell::new(0));
+                    let calls_cloned = calls.clone();
+                    let callback = move || {
+                        *calls_cloned.borrow_mut() += 1;
+                    };
+                    let sg = SchedulingGroup::create("sg", 100.).await;
+                    timer.set_callback_under_group(callback, &sg);
+
+                    let duration = Duration::from_millis(100);
+                    timer.arm(duration);
+
+                    [<check_ $timer>](&mut timer, duration, calls).await;
+                }
+
+                #[seastar::test]
                 async fn [<test_ $timer _arm_at>]() {
                     let (mut timer, duration, calls) = [<set_up_ $timer _test>]();
 
