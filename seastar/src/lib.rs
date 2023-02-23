@@ -18,6 +18,7 @@ mod sleep;
 mod smp;
 mod spawn;
 mod submit_to;
+mod timer;
 
 #[doc(hidden)]
 pub use seastar_test_guard::acquire_guard_for_seastar_test;
@@ -33,6 +34,7 @@ pub use sleep::*;
 pub use smp::*;
 pub use spawn::*;
 pub use submit_to::*;
+pub use timer::*;
 
 /// A macro intended for running asynchronous tests.
 ///
