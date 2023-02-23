@@ -8,6 +8,7 @@ static CXX_BRIDGES: &[&str] = &[
     "src/spawn.rs",
     "src/submit_to.rs",
     "src/gate.rs",
+    "src/clocks.rs",
 ];
 
 static CXX_CPP_SOURCES: &[&str] = &[
@@ -16,6 +17,7 @@ static CXX_CPP_SOURCES: &[&str] = &[
     "src/spawn.cc",
     "src/submit_to.cc",
     "src/gate.cc",
+    "src/clocks.cc",
 ];
 
 fn main() {
