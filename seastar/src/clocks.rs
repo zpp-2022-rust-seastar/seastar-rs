@@ -9,6 +9,14 @@ mod ffi {
     #[namespace = "seastar_ffi::clocks"]
     unsafe extern "C++" {
         include!("seastar/src/clocks.hh");
+
+        fn steady_clock_now() -> i64;
+
+        fn lowres_clock_now() -> i64;
+
+        fn manual_clock_now() -> i64;
+
+        fn manual_clock_advance(duration: i64);
     }
 }
 
@@ -438,5 +446,73 @@ impl<ClockType> Sub for Instant<ClockType> {
     /// Panics if an overflow in the underlying data structure happens.
     fn sub(self, other: Instant<ClockType>) -> Duration<ClockType> {
         self.duration_since(other)
+    }
+}
+
+mod clock_implemantation {
+    use super::*;
+
+    // Hidden trait containing all clock specific ffi functions.
+    pub trait ClockImpl: Sized {}
+}
+
+/// Trait implemented by: [`SteadyClock`], [`LowresClock`], [`ManualClock`].
+pub trait Clock: clock_implemantation::ClockImpl {
+    /// Returns an instant representing the current value of the clock.
+    fn now() -> Instant<Self>;
+}
+
+/// Wrapper on `std::chrono::steady_clock`.
+pub struct SteadyClock;
+
+impl clock_implemantation::ClockImpl for SteadyClock {}
+
+impl Clock for SteadyClock {
+    fn now() -> Instant<SteadyClock> {
+        Instant::new(steady_clock_now())
+    }
+}
+
+/// Low-resolution and efficient steady clock.
+///
+/// Equivalent of `seastar::lowres_clock`.
+///
+/// This is a monotonic clock with a granularity of ~task_quota. Time points from this
+/// this clock do not correspond to system time.
+///
+/// The primary benefit of this clock is that invoking [`Clock::now`] is inexpensive
+/// compared to [`SteadyClock`].
+pub struct LowresClock;
+
+impl clock_implemantation::ClockImpl for LowresClock {}
+
+impl Clock for LowresClock {
+    fn now() -> Instant<LowresClock> {
+        Instant::new(lowres_clock_now())
+    }
+}
+
+/// Clock used mainly for testing.
+///
+/// Equivalent of `seastar::manual_clock`.
+pub struct ManualClock;
+
+impl clock_implemantation::ClockImpl for ManualClock {}
+
+impl Clock for ManualClock {
+    fn now() -> Instant<ManualClock> {
+        Instant::new(manual_clock_now())
+    }
+}
+
+impl ManualClock {
+    /// Advances `ManualClock` by `duration`.
+    ///
+    /// Equivalent of `seastar::manual_clock::advance`.
+    ///
+    /// # Arguments
+    /// * `duration` - The duration that the clock is advanced by.
+    pub fn advance(duration: Duration<ManualClock>) {
+        manual_clock_advance(duration.nanos);
     }
 }
