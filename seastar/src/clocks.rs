@@ -516,3 +516,248 @@ impl ManualClock {
         manual_clock_advance(duration.nanos);
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::panic::catch_unwind;
+
+    #[test]
+    fn test_clocks_smoke_test() {
+        // Clocks are also used in tests of the timer module.
+        let _ = SteadyClock::now();
+        let _ = LowresClock::now();
+        let _ = ManualClock::now();
+        ManualClock::advance(Duration::from_nanos(1000));
+    }
+
+    // Tests below test only `Instant<SteadyClock>` and `Duration<SteadyClock>`.
+    // All instant and duration types have the same definition so it suffices.
+
+    fn get_instants() -> (
+        Instant<SteadyClock>,
+        Instant<SteadyClock>,
+        Instant<SteadyClock>,
+    ) {
+        let i1 = Instant::new(2);
+        let i2 = Instant::new(-2);
+        let i3 = Instant::new(i64::MAX);
+        (i1, i2, i3)
+    }
+
+    #[test]
+    fn test_instant_checked_operations() {
+        let (i1, i2, _) = get_instants(); // (2, -2, _)
+        let d1 = Duration::from_nanos(2);
+        let d2 = Duration::from_nanos(i64::MAX);
+
+        let i = i1.checked_add(d1).unwrap();
+        assert_eq!(4, i.nanos);
+        assert!(i1.checked_add(d2).is_none()); // 2 + i64::MAX (overflow)
+
+        let i = i2.checked_sub(d1).unwrap();
+        assert_eq!(-4, i.nanos);
+        assert!(i2.checked_sub(d2).is_none()); // -2 - i64::MAX (overflow)
+    }
+
+    #[test]
+    fn test_instant_since_methods() {
+        let (i1, i2, i3) = get_instants(); // (2, -2, i64::MAX)
+
+        let d = i1.duration_since(i2);
+        assert_eq!(4, d.nanos);
+        assert!(catch_unwind(|| i3.duration_since(i2)).is_err()); // i64::MAX - (-2) (overflow)
+
+        let d = i1.checked_duration_since(i2).unwrap();
+        assert_eq!(4, d.nanos);
+        assert!(i3.checked_duration_since(i2).is_none()); // i64::MAX - (-2) (overflow)
+
+        let d = i1.duration_since_epoch();
+        assert_eq!(2, d.nanos);
+    }
+
+    #[test]
+    fn test_instant_add() {
+        let i1 = Instant::<SteadyClock>::new(2);
+        let d1 = Duration::from_nanos(2);
+        let d2 = Duration::from_nanos(i64::MAX);
+
+        let i = i1 + d1; // 2 + 2
+        assert_eq!(4, i.nanos);
+        assert!(catch_unwind(|| i1 + d2).is_err()); // 2 + i64::MAX (overflow)
+
+        let mut i = i1;
+        i += d1; // 2 += 2
+        assert_eq!(4, i.nanos);
+        assert!(catch_unwind(|| {
+            let mut i = i1;
+            i += d2; // 2 + i64::MAX (overflow)
+        })
+        .is_err());
+    }
+
+    #[test]
+    fn test_instant_sub() {
+        let (i1, i2, i3) = get_instants(); // (2, -2, i64::MAX)
+        let d1 = Duration::from_nanos(2);
+        let d2 = Duration::from_nanos(i64::MAX);
+
+        let i = i2 - d1;
+        assert_eq!(-4, i.nanos);
+        assert!(catch_unwind(|| i2 - d2).is_err()); // -2 - i64::MAX (overflow)
+
+        let mut i = i2;
+        i -= d1;
+        assert_eq!(-4, i.nanos);
+        assert!(catch_unwind(|| {
+            let mut i = i2;
+            i -= d2; // -2 - i64::MAX (overflow)
+        })
+        .is_err());
+
+        let d = i1 - i2;
+        assert_eq!(4, d.nanos);
+        assert!(catch_unwind(|| i3 - i2).is_err()); // i64::MAX - (-2) (overflow)
+    }
+
+    fn get_durations() -> (
+        Duration<SteadyClock>,
+        Duration<SteadyClock>,
+        Duration<SteadyClock>,
+    ) {
+        let d1 = Duration::from_nanos(1);
+        let d2 = Duration::from_nanos(-2);
+        let d3 = Duration::from_nanos(i64::MAX);
+        (d1, d2, d3)
+    }
+
+    #[test]
+    fn test_duration_as_and_from() {
+        let secs = 123;
+        let d_secs = Duration::<SteadyClock>::from_secs(secs);
+        let d_millis = Duration::<SteadyClock>::from_millis(secs * 1000);
+        let d_micros = Duration::<SteadyClock>::from_micros(secs * 1_000_000);
+        let d_nanos = Duration::<SteadyClock>::from_nanos(secs as i64 * 1_000_000_000);
+
+        assert_eq!(d_secs, d_millis);
+        assert_eq!(d_millis, d_micros);
+        assert_eq!(d_micros, d_nanos);
+
+        assert_eq!(secs as i64, d_secs.as_secs());
+        assert_eq!(secs as i64 * 1000, d_secs.as_millis());
+        assert_eq!(secs as i64 * 1_000_000, d_secs.as_micros());
+        assert_eq!(secs as i64 * 1_000_000_000, d_secs.as_nanos());
+    }
+
+    #[test]
+    fn test_duration_is_zero() {
+        let zero = Duration::<SteadyClock>::ZERO;
+        assert!(zero.is_zero());
+        let non_zero = Duration::<SteadyClock>::NANOSECOND;
+        assert!(!non_zero.is_zero());
+    }
+
+    #[test]
+    fn test_duration_checked_operations() {
+        let (d1, d2, d3) = get_durations(); // (1, -2, i64::MAX)
+
+        let d = d1.checked_add(d2).unwrap();
+        assert_eq!(-1, d.nanos);
+        assert!(d1.checked_add(d3).is_none()); // 1 + i64::MAX (overflow)
+
+        let d = d1.checked_sub(d2).unwrap();
+        assert_eq!(3, d.nanos);
+        assert!(d1.checked_add(d3).is_none()); // -2 - i64::MAX (overflow)
+
+        let d = d1.checked_mul(2).unwrap();
+        assert_eq!(2, d.nanos);
+        assert!(d3.checked_mul(2).is_none()); // i64::MAX * 2 (overflow)
+
+        let d = d2.checked_div(2).unwrap();
+        assert_eq!(-1, d.nanos);
+        assert!(d1.checked_div(0).is_none()); // division by 0
+    }
+
+    #[test]
+    fn test_duration_arithmetical_add() {
+        let (d1, d2, d3) = get_durations(); // (1, -2, i64::MAX)
+
+        let d = d1 + d2;
+        assert_eq!(-1, d.nanos);
+        assert!(catch_unwind(|| d1 + d3).is_err()); // 1 + i64::MAX (overflow)
+
+        let mut d = d1;
+        d += d2;
+        assert_eq!(-1, d.nanos);
+        assert!(catch_unwind(|| {
+            let mut d = d1;
+            d += d3; // 1 + i64::MAX (overflow)
+        })
+        .is_err());
+    }
+
+    #[test]
+    fn test_duration_arithmetical_sub() {
+        let (d1, d2, d3) = get_durations(); // (1, -2, i64::MAX)
+
+        let d = d1 - d2;
+        assert_eq!(3, d.nanos);
+        assert!(catch_unwind(|| d2 - d3).is_err()); // -2 - i64::MAX (overflow)
+
+        let mut d = d1;
+        d -= d2;
+        assert_eq!(3, d.nanos);
+        assert!(catch_unwind(|| {
+            let mut d = d2;
+            d -= d3; // -2 - i64::MAX (overflow)
+        })
+        .is_err());
+    }
+
+    #[test]
+    fn test_duration_arithmetical_mul() {
+        let (d1, _, d3) = get_durations(); // (1, _, i64::MAX)
+
+        let d = d1 * 2;
+        assert_eq!(2, d.nanos);
+        let d = 2 * d1;
+        assert_eq!(2, d.nanos);
+        assert!(catch_unwind(|| d3 * 2).is_err()); // i64::MAX * 2 (overflow)
+        assert!(catch_unwind(|| 2 * d3).is_err()); // 2 * i64::MAX (overflow)
+
+        let mut d = d1;
+        d *= 2;
+        assert_eq!(2, d.nanos);
+        assert!(catch_unwind(|| {
+            let mut d = d3;
+            d *= 2; // i64::MAX * 2 (overflow)
+        })
+        .is_err());
+    }
+
+    #[test]
+    fn test_duration_arithmetical_div() {
+        let (d1, d2, _) = get_durations(); // (1, -2, _)
+
+        let d = d2 / 2;
+        assert_eq!(-1, d.nanos);
+        assert!(catch_unwind(|| d1 / 0).is_err()); // division by 0
+
+        let mut d = d2;
+        d /= 2;
+        assert_eq!(-1, d.nanos);
+        assert!(catch_unwind(|| {
+            let mut d = d1;
+            d /= 0; // division by 0
+        })
+        .is_err());
+    }
+
+    #[test]
+    fn test_duration_arithmetical_neg() {
+        let d = -Duration::<SteadyClock>::from_nanos(1);
+        assert_eq!(-1, d.nanos);
+        let d = Duration::<SteadyClock>::MIN;
+        assert!(catch_unwind(|| -d).is_err()); // -i64::MIN == i64::MAX + 1 (overflow)
+    }
+}
