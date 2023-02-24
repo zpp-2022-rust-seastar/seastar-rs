@@ -274,3 +274,169 @@ impl<ClockType> Neg for Duration<ClockType> {
         }
     }
 }
+
+/// Type used by the `ClockType` clock to represent points in time.
+///
+/// `Instant<ClockType>` is implemented as if it stores a value of
+/// [`Duration<ClockType>`] indicating the time interval from the start of the
+/// `ClockType`'s epoch.
+pub struct Instant<ClockType> {
+    pub(crate) nanos: i64,
+    _phantom: PhantomData<ClockType>,
+}
+
+impl<ClockType> PartialEq for Instant<ClockType> {
+    fn eq(&self, other: &Self) -> bool {
+        self.nanos == other.nanos
+    }
+}
+
+impl<ClockType> Eq for Instant<ClockType> {}
+
+impl<ClockType> Ord for Instant<ClockType> {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.nanos.cmp(&other.nanos)
+    }
+}
+
+impl<ClockType> PartialOrd for Instant<ClockType> {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl<ClockType> Hash for Instant<ClockType> {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.nanos.hash(state);
+    }
+}
+
+impl<ClockType> Clone for Instant<ClockType> {
+    fn clone(&self) -> Self {
+        Self {
+            nanos: self.nanos,
+            _phantom: PhantomData,
+        }
+    }
+}
+
+impl<ClockType> Copy for Instant<ClockType> {}
+
+impl<ClockType> Default for Instant<ClockType> {
+    fn default() -> Self {
+        Self::new(0)
+    }
+}
+
+impl<ClockType> fmt::Debug for Instant<ClockType> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Instant")
+            .field("nanos", &self.nanos)
+            .finish()
+    }
+}
+
+impl<ClockType> Instant<ClockType> {
+    pub(crate) const fn new(nanos: i64) -> Self {
+        Self {
+            nanos,
+            _phantom: PhantomData,
+        }
+    }
+
+    /// Returns `Some(t)` where `t` is equal to `self + duration` if `t` is
+    /// inside the bounds of the underlying data structure, None otherwise.
+    pub const fn checked_add(&self, duration: Duration<ClockType>) -> Option<Self> {
+        match self.nanos.checked_add(duration.nanos) {
+            Some(nanos) => Some(Self::new(nanos)),
+            None => None,
+        }
+    }
+
+    /// Returns `Some(t)` where `t` is equal to `self - duration` if `t` is
+    /// inside the bounds of the underlying data structure, None otherwise.
+    pub const fn checked_sub(&self, duration: Duration<ClockType>) -> Option<Self> {
+        match self.nanos.checked_sub(duration.nanos) {
+            Some(nanos) => Some(Self::new(nanos)),
+            None => None,
+        }
+    }
+
+    /// Returns the amount of time elapsed from another instant to this one.
+    /// If `other` is later that `&self` the returned value is negative.
+    ///
+    /// # Panics
+    /// Panics if an overflow in the underlying data structure happens.
+    pub const fn duration_since(&self, other: Self) -> Duration<ClockType> {
+        match self.nanos.checked_sub(other.nanos) {
+            Some(nanos) => Duration::from_nanos(nanos),
+            None => panic!(),
+        }
+    }
+
+    /// Returns the amount of time elapsed from another instant to this one
+    /// or None when overflow in the underlying data structure happens.
+    pub const fn checked_duration_since(&self, other: Self) -> Option<Duration<ClockType>> {
+        match self.nanos.checked_sub(other.nanos) {
+            Some(nanos) => Some(Duration::from_nanos(nanos)),
+            None => None,
+        }
+    }
+
+    /// Returns a duration representing the amount of time between `&self` and
+    /// the clock's epoch.
+    ///
+    /// Equivalent of `std::chrono::time_since_epoch`.
+    pub const fn duration_since_epoch(&self) -> Duration<ClockType> {
+        Duration::from_nanos(self.nanos)
+    }
+}
+
+impl<ClockType> Add<Duration<ClockType>> for Instant<ClockType> {
+    type Output = Self;
+
+    /// # Panics
+    /// Panics if an overflow in the underlying data structure happens.
+    fn add(self, duration: Duration<ClockType>) -> Self {
+        self.checked_add(duration).unwrap()
+    }
+}
+
+impl<ClockType> AddAssign<Duration<ClockType>> for Instant<ClockType> {
+    /// # Panics
+    /// Panics if an overflow in the underlying data structure happens.
+    fn add_assign(&mut self, duration: Duration<ClockType>) {
+        *self = self.checked_add(duration).unwrap()
+    }
+}
+
+impl<ClockType> Sub<Duration<ClockType>> for Instant<ClockType> {
+    type Output = Self;
+
+    /// # Panics
+    /// Panics if an overflow in the underlying data structure happens.
+    fn sub(self, duration: Duration<ClockType>) -> Self {
+        self.checked_sub(duration).unwrap()
+    }
+}
+
+impl<ClockType> SubAssign<Duration<ClockType>> for Instant<ClockType> {
+    /// # Panics
+    /// Panics if an overflow in the underlying data structure happens.
+    fn sub_assign(&mut self, duration: Duration<ClockType>) {
+        *self = self.checked_sub(duration).unwrap()
+    }
+}
+
+impl<ClockType> Sub for Instant<ClockType> {
+    type Output = Duration<ClockType>;
+
+    /// Returns the amount of time elapsed from another instant to this one.
+    /// If `other` is later that `self` the returned value is negative.
+    ///
+    /// # Panics
+    /// Panics if an overflow in the underlying data structure happens.
+    fn sub(self, other: Instant<ClockType>) -> Duration<ClockType> {
+        self.duration_since(other)
+    }
+}
