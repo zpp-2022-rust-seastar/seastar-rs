@@ -158,3 +158,197 @@ impl<ClockType: Clock> Timer<ClockType> {
         return Some(Instant::new(ClockType::get_timeout(&self.inner)));
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate as seastar;
+    use crate::sleep;
+    use crate::{LowresClock, ManualClock, SteadyClock};
+    use std::cell::RefCell;
+    use std::rc::Rc;
+
+    async fn steady_clock_timer_wait(duration: Duration<SteadyClock>) {
+        sleep(duration).await;
+    }
+
+    async fn lowres_clock_timer_wait(duration: Duration<LowresClock>) {
+        sleep(duration).await;
+    }
+
+    async fn manual_clock_timer_wait(duration: Duration<ManualClock>) {
+        ManualClock::advance(duration);
+    }
+
+    // Macro used to generate tests for the timer specializations.
+    // - `Clock` - name of the corresponding clock type,
+    // - `timer` - infix used to define test names,
+    // - `wait` - name of the corresponding wait function (look above).
+    macro_rules! test_timer {
+        ($Clock:ty, $timer:ident, $wait:ident) => {
+            paste::paste! {
+                // Funtion doing generic start of every arm/ream timer's test.
+                fn [<set_up_ $timer _test>]() -> (Timer<$Clock>, Duration<$Clock>, Rc<RefCell<u32>>) {
+                    let mut timer = Timer::new();
+
+                    let calls = Rc::new(RefCell::new(0));
+                    let calls_cloned = calls.clone();
+                    let callback = move || {
+                        *calls_cloned.borrow_mut() += 1;
+                    };
+                    timer.set_callback(callback);
+
+                    let duration = Duration::from_millis(100);
+
+                    (timer, duration, calls)
+                }
+
+                // Funtion doing generic start of every non-periodic arm/ream timer's test.
+                async fn [<check_ $timer>](
+                    timer: &mut Timer<$Clock>,
+                    duration: Duration<$Clock>,
+                    calls: Rc<RefCell<u32>>,
+                ) {
+                    $wait(duration / 2).await;
+                    assert!(*calls.borrow() == 0);
+                    $wait(duration).await;
+                    assert!(*calls.borrow() == 1);
+                    $wait(duration).await;
+                    assert!(*calls.borrow() == 1);
+                    timer.cancel();
+                }
+
+                // Funtion doing generic start of every periodic arm/ream timer's test.
+                async fn [<check_ $timer _periodic>](
+                    timer: &mut Timer<$Clock>,
+                    duration: Duration<$Clock>,
+                    calls: Rc<RefCell<u32>>,
+                ) {
+                    $wait(duration / 2).await;
+                    assert!(*calls.borrow() == 0);
+                    $wait(duration).await;
+                    assert!(*calls.borrow() == 1);
+                    $wait(duration).await;
+                    assert!(*calls.borrow() == 2);
+                    timer.cancel();
+                    $wait(duration).await;
+                    assert!(*calls.borrow() == 2);
+                }
+
+                #[seastar::test]
+                async fn [<test_ $timer _arm_at>]() {
+                    let (mut timer, duration, calls) = [<set_up_ $timer _test>]();
+
+                    let now = $Clock::now();
+                    timer.arm_at(now + duration);
+
+                    [<check_ $timer>](&mut timer, duration, calls).await
+                }
+
+                #[seastar::test]
+                async fn [<test_ $timer _arm_at_periodic>]() {
+                    let (mut timer, duration, calls) = [<set_up_ $timer _test>]();
+
+                    let now = $Clock::now();
+                    timer.arm_at_periodic(now + duration, duration);
+
+                    [<check_ $timer _periodic>](&mut timer, duration, calls).await
+                }
+
+                #[seastar::test]
+                async fn [<test_ $timer _rearm_at>]() {
+                    let (mut timer, duration, calls) = [<set_up_ $timer _test>]();
+
+                    let now = $Clock::now();
+                    timer.arm(10 * duration);
+                    timer.rearm_at(now + duration);
+
+                    [<check_ $timer>](&mut timer, duration, calls).await
+                }
+
+                #[seastar::test]
+                async fn [<test_ $timer _rearm_at_periodic>]() {
+                    let (mut timer, duration, calls) = [<set_up_ $timer _test>]();
+
+                    let now = $Clock::now();
+                    timer.arm(10 * duration);
+                    timer.rearm_at_periodic(now + duration, duration);
+
+                    [<check_ $timer _periodic>](&mut timer, duration, calls).await
+                }
+
+                #[seastar::test]
+                async fn [<test_ $timer _arm>]() {
+                    let (mut timer, duration, calls) = [<set_up_ $timer _test>]();
+
+                    timer.arm(duration);
+
+                    [<check_ $timer>](&mut timer, duration, calls).await
+                }
+
+                #[seastar::test]
+                async fn [<test_ $timer _arm_periodic>]() {
+                    let (mut timer, duration, calls) = [<set_up_ $timer _test>]();
+
+                    timer.arm_periodic(duration);
+
+                    [<check_ $timer _periodic>](&mut timer, duration, calls).await;
+                }
+
+                #[seastar::test]
+                async fn [<test_ $timer _rearm>]() {
+                    let (mut timer, duration, calls) = [<set_up_ $timer _test>]();
+
+                    timer.arm(10 * duration);
+                    timer.rearm(duration);
+
+                    [<check_ $timer>](&mut timer, duration, calls).await
+                }
+
+                #[seastar::test]
+                async fn [<test_ $timer _rearm_periodic>]() {
+                    let (mut timer, duration, calls) = [<set_up_ $timer _test>]();
+
+                    timer.arm(10 * duration);
+                    timer.rearm_periodic(duration);
+
+                    [<check_ $timer _periodic>](&mut timer, duration, calls).await;
+                }
+
+                #[seastar::test]
+                async fn [<test_ $timer _armed>]() {
+                    let mut timer = Timer::<$Clock>::new();
+                    assert!(!timer.armed());
+
+                    timer.set_callback(|| {});
+                    let duration = Duration::from_millis(100);
+                    timer.arm(duration);
+                    assert!(timer.armed());
+
+                    $wait(duration * 2).await;
+                    assert!(!timer.armed());
+                }
+
+                #[seastar::test]
+                async fn [<test_ $timer _get_timeout>]() {
+                    let mut timer = Timer::<$Clock>::new();
+                    assert!(timer.get_timeout().is_none());
+
+                    let now = $Clock::now();
+                    let duration = Duration::from_secs(1);
+                    timer.arm(duration);
+
+                    let timeout = timer.get_timeout().unwrap();
+                    let diff = timeout - now;
+                    assert!(diff >= duration);
+                }
+            }
+        };
+    }
+
+    test_timer!(SteadyClock, steady_clock_timer, steady_clock_timer_wait);
+
+    test_timer!(LowresClock, lowres_clock_timer, lowres_clock_timer_wait);
+
+    test_timer!(ManualClock, manual_clock_timer, manual_clock_timer_wait);
+}
