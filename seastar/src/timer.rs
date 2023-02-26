@@ -12,6 +12,56 @@ use std::marker::PhantomData;
 /// - `Timer<SteadyClock>` − has relatively high accuracy but is quite expensive.
 /// - `Timer<LowresClock>` − has very coarse resolution (~10 ms) but is quite efficient.
 /// - `Timer<ManualClock>` − used mainly for testing.
+///
+/// # Examples
+///
+/// ### `Timer<SteadyClock>`
+///
+/// ```rust
+/// #[seastar::test]
+/// async fn steady_clock_example () {
+///     let mut timer = seastar::Timer::<SteadyClock>::new();
+///
+///     let finished = std::rc::Rc::new(std::cell::RefCell::new(false));
+///     let callback = || {
+///         *finished.borrow_mut() = true;
+///     };
+///     timer.set_callback(callback);
+///
+///     let delta = seastar::Duration::from_secs(1);
+///     timer.arm(delta);
+///
+///     seastar::steady_sleep(delta / 2).await;
+///     assert!(!*finished.borrow());
+///     seastar::steady_sleep(delta).await;
+///     assert!(*finished.borrow());
+/// }
+/// ```
+///
+/// `Timer<LowresClock>` works exactly the same.
+///
+/// ### `Timer<ManualClock>`
+///
+/// ```rust
+/// #[seastar::test]
+/// async fn manual_clock_example () {
+///     let mut timer = seastar::Timer::<ManualClock>::new();
+///
+///     let finished = std::rc::Rc::new(std::cell::RefCell::new(false));
+///     let callback = || {
+///         *finished.borrow_mut() = true;
+///     };
+///     timer.set_callback(callback);
+///
+///     let delta = seastar::Duration::from_secs(1);
+///     timer.arm(delta);
+///
+///     seastar::ManualClock::advance(delta / 2);
+///     assert!(!*finished.borrow());
+///     seastar::ManualClock::advance(delta);
+///     assert!(*finished.borrow());
+/// }
+/// ```
 pub struct Timer<ClockType: Clock> {
     inner: ClockType::CppTimer,
     _phantom: PhantomData<ClockType>,
