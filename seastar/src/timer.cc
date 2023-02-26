@@ -3,6 +3,8 @@
 namespace seastar_ffi {
 namespace timer {
 
+using seastar_ffi::clocks::to_nanos;
+
 // This class was created to drop callbacks passed to `timer::set_calback` at the right
 // time. We pass an instance of` callback_object` instead of a pure callback and the
 // callback is dropped when the `callback_object`'s destructor is called.
@@ -56,7 +58,150 @@ public:
 
 namespace steady_clock {
 
+using sc = seastar::steady_clock_type;
+using seastar_ffi::clocks::to_sc_duration;
+using seastar_ffi::clocks::to_sc_time_point;
+
+std::unique_ptr<steady_clock_timer> new_sct() {
+    return std::make_unique<steady_clock_timer>();
+}
+
+void sct_set_callback(
+    steady_clock_timer& timer,
+    uint8_t* callback,
+    rust::Fn<void(uint8_t*)> caller,
+    rust::Fn<void(uint8_t*)> dropper
+) {
+    timer.set_callback(callback_object(callback, caller, dropper));
+}
+
+void sct_arm_at(steady_clock_timer& timer, int64_t at) {
+    timer.arm(to_sc_time_point(at));
+}
+
+void sct_arm_at_periodic(steady_clock_timer& timer, int64_t at, int64_t period) {
+    timer.arm(to_sc_time_point(at), std::optional(to_sc_duration(period)));
+}
+
+void sct_rearm_at(steady_clock_timer& timer, int64_t at) {
+    timer.rearm(to_sc_time_point(at));
+}
+
+void sct_rearm_at_periodic(steady_clock_timer& timer, int64_t at, int64_t period) {
+    timer.rearm(to_sc_time_point(at), std::optional(to_sc_duration(period)));
+}
+
+bool sct_armed(const steady_clock_timer& timer) {
+    return timer.armed();
+}
+
+bool sct_cancel(steady_clock_timer& timer) {
+    return timer.cancel();
+}
+
+int64_t sct_get_timeout(const steady_clock_timer& timer) {
+    return to_nanos(timer.get_timeout().time_since_epoch()).count();
+}
+
 } // namespace steady_clock
+
+namespace lowres_clock {
+
+using lc = seastar::lowres_clock;
+using seastar_ffi::clocks::to_lc_duration;
+using seastar_ffi::clocks::to_lc_time_point;
+
+std::unique_ptr<lowres_clock_timer> new_lct() {
+    return std::make_unique<lowres_clock_timer>();
+}
+
+void lct_set_callback(
+    lowres_clock_timer& timer,
+    uint8_t* callback,
+    rust::Fn<void(uint8_t*)> caller,
+    rust::Fn<void(uint8_t*)> dropper
+) {
+    timer.set_callback(callback_object(callback, caller, dropper));
+}
+
+void lct_arm_at(lowres_clock_timer& timer, int64_t at) {
+    timer.arm(to_lc_time_point(at));
+}
+
+void lct_arm_at_periodic(lowres_clock_timer& timer, int64_t at, int64_t period) {
+    timer.arm(to_lc_time_point(at), std::optional(to_lc_duration(period)));
+}
+
+void lct_rearm_at(lowres_clock_timer& timer, int64_t at) {
+    timer.rearm(to_lc_time_point(at));
+}
+
+void lct_rearm_at_periodic(lowres_clock_timer& timer, int64_t at, int64_t period) {
+    timer.rearm(to_lc_time_point(at), std::optional(to_lc_duration(period)));
+}
+
+bool lct_armed(const lowres_clock_timer& timer) {
+    return timer.armed();
+}
+
+bool lct_cancel(lowres_clock_timer& timer) {
+    return timer.cancel();
+}
+
+int64_t lct_get_timeout(const lowres_clock_timer& timer) {
+    return to_nanos(timer.get_timeout().time_since_epoch()).count();
+}
+
+} // namespace lowres_clock
+
+namespace manual_clock {
+
+using mc = seastar::manual_clock;
+using seastar_ffi::clocks::to_mc_duration;
+using seastar_ffi::clocks::to_mc_time_point;
+
+std::unique_ptr<manual_clock_timer> new_mct() {
+    return std::make_unique<manual_clock_timer>();
+}
+
+void mct_set_callback(
+    manual_clock_timer& timer,
+    uint8_t* callback,
+    rust::Fn<void(uint8_t*)> caller,
+    rust::Fn<void(uint8_t*)> dropper
+) {
+    timer.set_callback(callback_object(callback, caller, dropper));
+}
+
+void mct_arm_at(manual_clock_timer& timer, int64_t at) {
+    timer.arm(to_mc_time_point(at));
+}
+
+void mct_arm_at_periodic(manual_clock_timer& timer, int64_t at, int64_t period) {
+    timer.arm(to_mc_time_point(at), std::optional(to_mc_duration(period)));
+}
+
+void mct_rearm_at(manual_clock_timer& timer, int64_t at) {
+    timer.rearm(to_mc_time_point(at));
+}
+
+void mct_rearm_at_periodic(manual_clock_timer& timer, int64_t at, int64_t period) {
+    timer.rearm(to_mc_time_point(at), std::optional(to_mc_duration(period)));
+}
+
+bool mct_armed(const manual_clock_timer& timer) {
+    return timer.armed();
+}
+
+bool mct_cancel(manual_clock_timer& timer) {
+    return timer.cancel();
+}
+
+int64_t mct_get_timeout(const manual_clock_timer& timer) {
+    return to_nanos(timer.get_timeout().time_since_epoch()).count();
+}
+
+} // namespace manual_clock
 
 } // namespace timer
 } // namespace seastar_ffi
