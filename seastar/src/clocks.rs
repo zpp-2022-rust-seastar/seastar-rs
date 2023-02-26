@@ -35,6 +35,90 @@ mod ffi {
 
         fn manual_sleep(nanos: i64) -> VoidFuture;
     }
+
+    #[namespace = "seastar_ffi::timer::steady_clock"]
+    unsafe extern "C++" {
+        include!("seastar/src/timer.hh");
+
+        type steady_clock_timer;
+
+        fn new_sct() -> UniquePtr<steady_clock_timer>;
+
+        unsafe fn sct_set_callback(
+            timer: Pin<&mut steady_clock_timer>,
+            callback: *mut u8, // u8 is a substitute for c_void that isn't supported by cxx.
+            caller: unsafe fn(*mut u8),
+            dropper: unsafe fn(*mut u8),
+        );
+
+        fn sct_arm_at(timer: Pin<&mut steady_clock_timer>, at: i64);
+        fn sct_arm_at_periodic(timer: Pin<&mut steady_clock_timer>, at: i64, period: i64);
+
+        fn sct_rearm_at(timer: Pin<&mut steady_clock_timer>, at: i64);
+        fn sct_rearm_at_periodic(timer: Pin<&mut steady_clock_timer>, at: i64, period: i64);
+
+        fn sct_armed(timer: &steady_clock_timer) -> bool;
+
+        fn sct_cancel(timer: Pin<&mut steady_clock_timer>) -> bool;
+
+        fn sct_get_timeout(timer: &steady_clock_timer) -> i64;
+    }
+
+    #[namespace = "seastar_ffi::timer::lowres_clock"]
+    unsafe extern "C++" {
+        include!("seastar/src/timer.hh");
+
+        type lowres_clock_timer;
+
+        fn new_lct() -> UniquePtr<lowres_clock_timer>;
+
+        unsafe fn lct_set_callback(
+            timer: Pin<&mut lowres_clock_timer>,
+            callback: *mut u8, // u8 is a substitute for c_void that isn't supported by cxx.
+            caller: unsafe fn(*mut u8),
+            dropper: unsafe fn(*mut u8),
+        );
+
+        fn lct_arm_at(timer: Pin<&mut lowres_clock_timer>, at: i64);
+        fn lct_arm_at_periodic(timer: Pin<&mut lowres_clock_timer>, at: i64, period: i64);
+
+        fn lct_rearm_at(timer: Pin<&mut lowres_clock_timer>, at: i64);
+        fn lct_rearm_at_periodic(timer: Pin<&mut lowres_clock_timer>, at: i64, period: i64);
+
+        fn lct_armed(timer: &lowres_clock_timer) -> bool;
+
+        fn lct_cancel(timer: Pin<&mut lowres_clock_timer>) -> bool;
+
+        fn lct_get_timeout(timer: &lowres_clock_timer) -> i64;
+    }
+
+    #[namespace = "seastar_ffi::timer::manual_clock"]
+    unsafe extern "C++" {
+        include!("seastar/src/timer.hh");
+
+        type manual_clock_timer;
+
+        fn new_mct() -> UniquePtr<manual_clock_timer>;
+
+        unsafe fn mct_set_callback(
+            timer: Pin<&mut manual_clock_timer>,
+            callback: *mut u8, // u8 is a substitute for c_void that isn't supported by cxx.
+            caller: unsafe fn(*mut u8),
+            dropper: unsafe fn(*mut u8),
+        );
+
+        fn mct_arm_at(timer: Pin<&mut manual_clock_timer>, at: i64);
+        fn mct_arm_at_periodic(timer: Pin<&mut manual_clock_timer>, at: i64, period: i64);
+
+        fn mct_rearm_at(timer: Pin<&mut manual_clock_timer>, at: i64);
+        fn mct_rearm_at_periodic(timer: Pin<&mut manual_clock_timer>, at: i64, period: i64);
+
+        fn mct_armed(timer: &manual_clock_timer) -> bool;
+
+        fn mct_cancel(timer: Pin<&mut manual_clock_timer>) -> bool;
+
+        fn mct_get_timeout(timer: &manual_clock_timer) -> i64;
+    }
 }
 
 use ffi::*;
