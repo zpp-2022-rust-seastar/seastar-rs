@@ -2,6 +2,7 @@
 //!
 //! Work in progress! Definitely not for use in production yet.
 
+mod api_safety;
 mod cxx_async_futures;
 mod cxx_async_local_future;
 
@@ -14,6 +15,7 @@ pub(crate) mod seastar_test_guard;
 #[cfg(test)]
 pub(crate) use seastar_test_guard::acquire_guard_for_seastar_test;
 
+pub use api_safety::*;
 pub use config_and_start_seastar::*;
 pub use preempt::*;
 
