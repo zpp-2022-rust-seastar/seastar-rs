@@ -1,4 +1,3 @@
-use crate as seastar;
 use crate::ffi_utils::{get_dropper, get_fn_once_caller};
 use ffi::*;
 use std::future::Future;
@@ -66,6 +65,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate as seastar;
 
     #[seastar::test]
     async fn test_submit_to() {

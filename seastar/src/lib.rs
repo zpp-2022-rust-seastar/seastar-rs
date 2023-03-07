@@ -7,6 +7,7 @@ mod config_and_start_seastar;
 mod cxx_async_futures;
 mod cxx_async_local_future;
 mod ffi_utils;
+mod gate;
 mod preempt;
 #[cfg(test)]
 pub(crate) mod seastar_test_guard;
@@ -18,6 +19,7 @@ pub(crate) use seastar_test_guard::acquire_guard_for_seastar_test;
 
 pub use api_safety::*;
 pub use config_and_start_seastar::*;
+pub use gate::*;
 pub use preempt::*;
 pub use spawn::*;
 pub use submit_to::*;
