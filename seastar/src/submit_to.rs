@@ -33,12 +33,15 @@ mod ffi {
 ///     let ret = submit_to(0, || async { 42 }).await;
 ///     assert!(matches!(ret, 42));
 /// }
-pub async fn submit_to<Func, Fut, Ret>(shard_id: u32, func: Func) -> Ret
+/// ```
+pub fn submit_to<Func, Fut, Ret>(shard_id: u32, func: Func) -> impl Future<Output = Ret>
 where
     Func: FnOnce() -> Fut + Send + 'static,
     Fut: Future<Output = Ret> + 'static,
     Ret: Send + 'static,
 {
+    crate::assert_runtime_is_running();
+
     let (tx, rx) = futures::channel::oneshot::channel::<Ret>();
 
     let closure = move || {
@@ -52,11 +55,14 @@ where
     let boxed_closure = Box::into_raw(Box::new(closure)) as *mut u8;
 
     unsafe {
-        match ffi::submit_to(shard_id, boxed_closure, closure_caller).await {
-            Ok(_) => rx.await.unwrap(),
-            Err(_) => {
-                dropper(boxed_closure);
-                panic!()
+        let fut = ffi::submit_to(shard_id, boxed_closure, closure_caller);
+        async move {
+            match fut.await {
+                Ok(_) => rx.await.unwrap(),
+                Err(_) => {
+                    dropper(boxed_closure);
+                    panic!()
+                }
             }
         }
     }
@@ -91,5 +97,14 @@ mod tests {
     async fn test_submit_to_two_shards_nested() {
         let ret = submit_to(1, || async { submit_to(0, || async { 42 }).await }).await;
         assert!(matches!(ret, 42));
+    }
+
+    #[seastar::test]
+    async fn test_submit_to_no_await() {
+        let (tx, rx) = futures::channel::oneshot::channel::<i32>();
+        let _ = submit_to(0, || async {
+            tx.send(42).ok();
+        });
+        assert!(matches!(rx.await.unwrap(), 42));
     }
 }
