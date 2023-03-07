@@ -28,7 +28,7 @@ mod ffi {
 /// Spawning a task enables the task to execute concurrently to other tasks.
 ///
 /// This function must be called from the context of a Seastar runtime.
-pub async fn spawn<T, Ret: 'static>(future: T) -> Ret
+pub fn spawn<T, Ret: 'static>(future: T) -> impl Future<Output = Ret>
 where
     T: Future<Output = Ret> + 'static,
 {
@@ -37,13 +37,16 @@ where
     let x: Rc<Cell<Option<Ret>>> = Default::default();
 
     let x_clone = x.clone();
-    match cpp_spawn(VoidFuture::infallible_local(async move {
+    let fut = cpp_spawn(VoidFuture::infallible_local(async move {
         x_clone.set(Some(future.await));
-    }))
-    .await
-    {
-        Ok(_) => x.take().unwrap(),
-        Err(_) => panic!(),
+    }));
+
+    async move {
+        let result = fut.await;
+        match result {
+            Ok(_) => x.take().unwrap(),
+            Err(_) => panic!(),
+        }
     }
 }
 
@@ -85,5 +88,15 @@ mod tests {
     async fn test_chained_spawn_int() {
         let res = spawn(async move { spawn(async move { 2 }).await }).await;
         assert!(matches!(res, 2));
+    }
+
+    #[seastar::test]
+    async fn test_spawn_without_await() {
+        let (tx, rx) = futures::channel::oneshot::channel::<i32>();
+
+        let _ = spawn(async move {
+            tx.send(2).ok();
+        });
+        assert!(matches!(rx.await.unwrap(), 2));
     }
 }
