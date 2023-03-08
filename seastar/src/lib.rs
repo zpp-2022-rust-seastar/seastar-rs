@@ -15,6 +15,7 @@ pub(crate) mod seastar_test_guard;
 mod sleep;
 mod spawn;
 mod submit_to;
+mod smp;
 
 #[cfg(test)]
 pub(crate) use seastar_test_guard::acquire_guard_for_seastar_test;
@@ -27,6 +28,7 @@ pub use preempt::*;
 pub use sleep::*;
 pub use spawn::*;
 pub use submit_to::*;
+pub use smp::*;
 
 /// A macro intended for running asynchronous tests.
 ///
