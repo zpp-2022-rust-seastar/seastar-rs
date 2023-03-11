@@ -11,6 +11,8 @@ mod distributed;
 mod ffi_utils;
 mod file;
 mod gate;
+mod logger;
+
 mod preempt;
 #[doc(hidden)]
 pub mod seastar_test_guard;
@@ -29,6 +31,7 @@ pub use config_and_start_seastar::*;
 pub use distributed::*;
 pub use file::*;
 pub use gate::*;
+pub use logger::*;
 pub use preempt::*;
 pub use sleep::*;
 pub use smp::*;
