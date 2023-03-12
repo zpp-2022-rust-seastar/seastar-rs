@@ -1,5 +1,6 @@
 use crate::cxx_async_futures::VoidFuture;
 use core::cmp::Ordering;
+use cxx::UniquePtr;
 use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::marker::PhantomData;
@@ -550,13 +551,139 @@ impl<ClockType> Sub for Instant<ClockType> {
     }
 }
 
+#[doc(hidden)]
+pub enum CppTimer {
+    Steady(UniquePtr<steady_clock_timer>),
+    Lowres(UniquePtr<lowres_clock_timer>),
+    Manual(UniquePtr<manual_clock_timer>),
+}
+
 mod clock_implementation {
     use super::*;
 
     // Hidden trait containing all clock specific ffi functions.
     pub trait ClockImpl: Sized {
         fn sleep(nanos: i64) -> VoidFuture;
+
+        fn new() -> CppTimer;
+
+        fn set_callback(
+            cpp_timer: &mut CppTimer,
+            callback: *mut u8,
+            caller: fn(*mut u8),
+            dropper: fn(*mut u8),
+        );
+
+        fn arm_at(cpp_timer: &mut CppTimer, at: i64);
+
+        fn arm_at_periodic(cpp_timer: &mut CppTimer, at: i64, period: i64);
+
+        fn rearm_at(cpp_timer: &mut CppTimer, at: i64);
+
+        fn rearm_at_periodic(cpp_timer: &mut CppTimer, at: i64, period: i64);
+
+        fn armed(cpp_timer: &CppTimer) -> bool;
+
+        fn cancel(cpp_timer: &mut CppTimer) -> bool;
+
+        fn get_timeout(cpp_timer: &CppTimer) -> i64;
     }
+}
+
+// Macro used to generate the implementation of the part of `ClockImpl`
+// responsible for timer's ffi.
+// - `cpp_timer_variant` - variant of `CppTimer` corresponding to the clock.
+// - `ffi_pref` - prefix used by that variant's ffi functions.
+macro_rules! timer_impl {
+    ($cpp_timer_variant:ident, $ffi_pref:ident) => {
+        paste::paste! {
+            fn new() -> CppTimer {
+                CppTimer::$cpp_timer_variant([<new_ $ffi_pref>]())
+            }
+
+            fn set_callback(
+                cpp_timer: &mut CppTimer,
+                callback: *mut u8,
+                caller: fn(*mut u8),
+                dropper: fn(*mut u8),
+            ) {
+                match cpp_timer {
+                    CppTimer::$cpp_timer_variant(timer) => unsafe {
+                        [<$ffi_pref _set_callback>](
+                            timer.pin_mut(),
+                            callback,
+                            caller,
+                            dropper,
+                        );
+                    },
+                    _ => panic!(),
+                };
+            }
+
+            fn arm_at(cpp_timer: &mut CppTimer, at: i64) {
+                match cpp_timer {
+                    CppTimer::$cpp_timer_variant(timer) => {
+                        [<$ffi_pref _arm_at>](timer.pin_mut(), at);
+                    },
+                    _ => panic!(),
+                };
+            }
+
+            fn arm_at_periodic(cpp_timer: &mut CppTimer, at: i64, period: i64) {
+                match cpp_timer {
+                    CppTimer::$cpp_timer_variant(timer) => {
+                        [<$ffi_pref _arm_at_periodic>](timer.pin_mut(), at, period);
+                    },
+                    _ => panic!(),
+                };
+            }
+
+            fn rearm_at(cpp_timer: &mut CppTimer, at: i64) {
+                match cpp_timer {
+                    CppTimer::$cpp_timer_variant(timer) => {
+                        [<$ffi_pref _rearm_at>](timer.pin_mut(), at);
+                    },
+                    _ => panic!(),
+                };
+            }
+
+            fn rearm_at_periodic(cpp_timer: &mut CppTimer, at: i64, period: i64) {
+                match cpp_timer {
+                    CppTimer::$cpp_timer_variant(timer) => {
+                        [<$ffi_pref _rearm_at_periodic>](timer.pin_mut(), at, period);
+                    },
+                    _ => panic!(),
+                };
+            }
+
+            fn armed(cpp_timer: &CppTimer) -> bool {
+                match cpp_timer {
+                    CppTimer::$cpp_timer_variant(timer) => {
+                        [<$ffi_pref _armed>](timer)
+                    },
+                    _ => panic!(),
+                }
+            }
+
+            fn cancel(cpp_timer: &mut CppTimer) -> bool {
+                match cpp_timer {
+                    CppTimer::$cpp_timer_variant(timer) => {
+                        [<$ffi_pref _cancel>](timer.pin_mut())
+                    },
+                    _ => panic!(),
+                }
+            }
+
+            fn get_timeout(cpp_timer: &CppTimer) -> i64 {
+                match cpp_timer {
+                    CppTimer::$cpp_timer_variant(timer) => {
+                        [<$ffi_pref _get_timeout>](timer)
+                    },
+                    _ => panic!(),
+                }
+            }
+        }
+    };
 }
 
 /// Trait implemented by: [`SteadyClock`], [`LowresClock`], [`ManualClock`].
@@ -572,6 +699,8 @@ impl clock_implementation::ClockImpl for SteadyClock {
     fn sleep(nanos: i64) -> VoidFuture {
         steady_sleep(nanos)
     }
+
+    timer_impl!(Steady, sct);
 }
 
 impl Clock for SteadyClock {
@@ -595,6 +724,8 @@ impl clock_implementation::ClockImpl for LowresClock {
     fn sleep(nanos: i64) -> VoidFuture {
         lowres_sleep(nanos)
     }
+
+    timer_impl!(Lowres, lct);
 }
 
 impl Clock for LowresClock {
@@ -612,6 +743,8 @@ impl clock_implementation::ClockImpl for ManualClock {
     fn sleep(nanos: i64) -> VoidFuture {
         manual_sleep(nanos)
     }
+
+    timer_impl!(Manual, mct);
 }
 
 impl Clock for ManualClock {
