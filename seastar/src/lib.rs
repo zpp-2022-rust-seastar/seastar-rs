@@ -3,6 +3,7 @@
 //! Work in progress! Definitely not for use in production yet.
 
 mod api_safety;
+mod clocks;
 mod config_and_start_seastar;
 mod cxx_async_futures;
 mod cxx_async_local_future;
@@ -11,6 +12,7 @@ mod gate;
 mod preempt;
 #[cfg(test)]
 pub(crate) mod seastar_test_guard;
+mod sleep;
 mod spawn;
 mod submit_to;
 
@@ -18,9 +20,11 @@ mod submit_to;
 pub(crate) use seastar_test_guard::acquire_guard_for_seastar_test;
 
 pub use api_safety::*;
+pub use clocks::*;
 pub use config_and_start_seastar::*;
 pub use gate::*;
 pub use preempt::*;
+pub use sleep::*;
 pub use spawn::*;
 pub use submit_to::*;
 
