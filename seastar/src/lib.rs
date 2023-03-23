@@ -9,6 +9,7 @@ mod cxx_async_futures;
 mod cxx_async_local_future;
 mod distributed;
 mod ffi_utils;
+mod file;
 mod gate;
 mod preempt;
 #[doc(hidden)]
@@ -25,6 +26,7 @@ pub use api_safety::*;
 pub use clocks::*;
 pub use config_and_start_seastar::*;
 pub use distributed::*;
+pub use file::*;
 pub use gate::*;
 pub use preempt::*;
 pub use sleep::*;
