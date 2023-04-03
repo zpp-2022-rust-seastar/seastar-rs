@@ -2,7 +2,7 @@ use std::sync::{Mutex, MutexGuard};
 
 static RUNNING_TEST_WITH_SEASTAR: Mutex<()> = Mutex::new(());
 
-pub(crate) struct RunningTestWithSeastarGuard(MutexGuard<'static, ()>);
+pub struct RunningTestWithSeastarGuard(MutexGuard<'static, ()>);
 
 /// Acquires a global mutex for the purpose of running a test with the
 /// seastar runtime.
@@ -15,7 +15,7 @@ pub(crate) struct RunningTestWithSeastarGuard(MutexGuard<'static, ()>);
 ///
 /// The mutex should be taken by all tests that create a seastar runtime
 /// and held until the test finishes.
-pub(crate) fn acquire_guard_for_seastar_test() -> RunningTestWithSeastarGuard {
+pub fn acquire_guard_for_seastar_test() -> RunningTestWithSeastarGuard {
     // If a test panics, we assume that the runtime has been stopped
     // properly in that test, so we can ignore that the lock is poisoned.
     let guard = RUNNING_TEST_WITH_SEASTAR
