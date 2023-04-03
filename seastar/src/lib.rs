@@ -10,14 +10,14 @@ mod cxx_async_local_future;
 mod ffi_utils;
 mod gate;
 mod preempt;
-#[cfg(test)]
-pub(crate) mod seastar_test_guard;
+#[doc(hidden)]
+pub mod seastar_test_guard;
 mod sleep;
 mod spawn;
 mod submit_to;
 
-#[cfg(test)]
-pub(crate) use seastar_test_guard::acquire_guard_for_seastar_test;
+#[doc(hidden)]
+pub use seastar_test_guard::acquire_guard_for_seastar_test;
 
 pub use api_safety::*;
 pub use clocks::*;
