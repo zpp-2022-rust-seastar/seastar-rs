@@ -15,13 +15,46 @@ where
     fn_once_caller::<Func, Ret>
 }
 
+/// Convert the pointer to Box<Func> and then call it but don't consume.
+fn fn_caller<Func, Ret>(raw_func: *const u8) -> Ret
+where
+    Func: Fn() -> Ret,
+{
+    unsafe {
+        let func = &*(raw_func as *const Func);
+        func()
+    }
+}
+
+/// A helper function. We need to be able to name the type of a named closure.
+/// There is no `typeof` in Rust, so this is achieved by using a dummy parameter.
+pub const fn get_fn_caller<Func, Ret>(_: &Func) -> fn(*const u8) -> Ret
+where
+    Func: Fn() -> Ret,
+{
+    fn_caller::<Func, Ret>
+}
+
 /// Free a pointer.
 fn dropper<T>(raw_ptr: *mut u8) {
     unsafe {
         let _ = Box::from_raw(raw_ptr as *mut T);
     }
 }
+fn dropper_const<T>(raw_ptr: *const u8) {
+    unsafe {
+        let _ = Box::from_raw(raw_ptr as *mut u8 as *mut T);
+    }
+}
 
 pub const fn get_dropper<T>(_: &T) -> fn(*mut u8) {
+    dropper::<T>
+}
+
+pub const fn get_dropper_const<T>(_: &T) -> fn(*const u8) {
+    dropper_const::<T>
+}
+
+pub const fn get_dropper_noarg<T>() -> fn(*mut u8) {
     dropper::<T>
 }
