@@ -16,6 +16,7 @@ thiserror = "1.0.38"
 
 [dev-dependencies]
 num_cpus = "1.15.0"
+rand = "0.7.3"
 
 [build-dependencies]
 cxx-build = { version = "1", features = ["parallel"] }
