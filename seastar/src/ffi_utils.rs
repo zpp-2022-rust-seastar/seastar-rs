@@ -66,3 +66,20 @@ pub const fn get_dropper_const<T>(_: &T) -> fn(*const u8) {
 pub const fn get_dropper_noarg<T>() -> fn(*mut u8) {
     dropper::<T>
 }
+
+/// A wrapper over a raw pointer that makes it passable between threads.
+/// Use this only if you know what you're doing.
+pub struct PtrWrapper(*mut u8);
+
+impl PtrWrapper {
+    pub unsafe fn new(ptr: *mut u8) -> Self {
+        PtrWrapper(ptr)
+    }
+
+    pub unsafe fn as_ptr_mut(&self) -> *mut u8 {
+        self.0
+    }
+}
+
+unsafe impl Send for PtrWrapper {}
+unsafe impl Sync for PtrWrapper {}

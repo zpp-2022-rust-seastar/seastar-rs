@@ -1,6 +1,6 @@
 use crate::{
     cxx_async_local_future::IntoCxxAsyncLocalFuture,
-    ffi_utils::{get_dropper_const, get_dropper_noarg, get_fn_caller},
+    ffi_utils::{get_dropper_const, get_dropper_noarg, get_fn_caller, PtrWrapper},
     get_count,
     submit_to::submit_to,
     this_shard_id,
@@ -89,6 +89,18 @@ pub trait Service {
     fn stop(&self) -> Box<dyn Future<Output = ()>> {
         Box::new(async {})
     }
+}
+
+/// An object on which `Distributed`'s mapping functions operate.
+///
+/// It provides access to the local instance of a service,
+/// as well as its container, which can be used to communicate with other shards.
+pub struct PeeringShardedService<'a, S>
+where
+    S: Service,
+{
+    pub instance: &'a S,
+    pub container: &'a Distributed<S>,
 }
 
 /// A service distributed amongst all shards of a Seastar app.
@@ -265,13 +277,40 @@ impl<S: Service> Distributed<S> {
         ffi::stop(self._inner.as_ref().unwrap()).await.unwrap();
     }
 
+    fn submit_to<'a, Func, Fut, Ret>(
+        &'a self,
+        shard_id: u32,
+        func: Func,
+        container: PtrWrapper,
+    ) -> impl Future<Output = Ret>
+    where
+        Func: FnOnce(PeeringShardedService<'a, S>) -> Fut + Send + 'static,
+        Fut: Future<Output = Ret>,
+        Ret: Send + 'static,
+    {
+        crate::assert_runtime_is_running();
+
+        let distr = self._inner.clone();
+        submit_to(shard_id, || async move {
+            let instance = ffi::local(distr.as_ref().unwrap());
+            let instance: &S = unsafe { &*(instance as *const S) };
+            let _ = &container; // this is to avoid a partial move of the pointer
+            let container = unsafe { &*(container.as_ptr_mut() as *const Distributed<S>) };
+            let pss = PeeringShardedService {
+                instance,
+                container,
+            };
+            func(pss).await
+        })
+    }
+
     fn map_selected<'a, Func, Fut, Ret, I>(
         &'a self,
         func: Func,
         shards: I,
     ) -> Vec<impl Future<Output = Ret>>
     where
-        Func: Fn(&'a S) -> Fut + Send + Clone + 'static,
+        Func: FnOnce(PeeringShardedService<'a, S>) -> Fut + Send + Clone + 'static,
         Fut: Future<Output = Ret>,
         Ret: Send + 'static,
         I: IntoIterator<Item = u32>,
@@ -280,12 +319,21 @@ impl<S: Service> Distributed<S> {
 
         shards
             .into_iter()
-            .map(|shard| (shard, func.clone(), self._inner.clone()))
-            .map(|(shard, func, inner)| async move {
+            .map(|shard| {
+                let distr = unsafe { PtrWrapper::new(self as *const Distributed<S> as _) };
+                (shard, func.clone(), self._inner.clone(), distr)
+            })
+            .map(|(shard, func, inner, distr)| async move {
                 submit_to(shard, || async move {
                     let local = ffi::local(inner.as_ref().unwrap());
                     let local = unsafe { &*(local as *const S) };
-                    func(local).await
+                    let _ = &distr; // this is to avoid a partial move of the pointer
+                    let distr = unsafe { &*(distr.as_ptr_mut() as *const Distributed<S>) };
+                    let pss = PeeringShardedService {
+                        instance: local,
+                        container: distr,
+                    };
+                    func(pss).await
                 })
                 .await
             })
@@ -321,7 +369,7 @@ impl<S: Service> Distributed<S> {
     ///     let service_maker = move || CounterService(counter_clone.clone());
     ///     let distr = Distributed::start(service_maker).await;
     ///     
-    ///     let futs = distr.map_all(CounterService::inc);
+    ///     let futs = distr.map_all(|pss| pss.instance.inc());
     ///     join_all(futs).await;
     ///     distr.stop().await;
     ///     
@@ -330,7 +378,7 @@ impl<S: Service> Distributed<S> {
     /// ```
     pub fn map_all<'a, Func, Ret, Fut>(&'a self, func: Func) -> Vec<impl Future<Output = Ret>>
     where
-        Func: Fn(&'a S) -> Fut + Send + Clone + 'static,
+        Func: FnOnce(PeeringShardedService<'a, S>) -> Fut + Send + Clone + 'static,
         Fut: Future<Output = Ret>,
         Ret: Send + 'static,
     {
@@ -366,7 +414,7 @@ impl<S: Service> Distributed<S> {
     ///     let service_maker = move || CounterService(counter_clone.clone());
     ///     let distr = Distributed::start(service_maker).await;
     ///     
-    ///     let futs = distr.map_others(CounterService::inc);
+    ///     let futs = distr.map_others(|pss| pss.instance.inc());
     ///     join_all(futs).await;
     ///     distr.stop().await;
     ///     
@@ -375,7 +423,7 @@ impl<S: Service> Distributed<S> {
     /// ```
     pub fn map_others<'a, Func, Ret, Fut>(&'a self, func: Func) -> Vec<impl Future<Output = Ret>>
     where
-        Func: Fn(&'a S) -> Fut + Send + Clone + 'static,
+        Func: FnOnce(PeeringShardedService<'a, S>) -> Fut + Send + Clone + 'static,
         Fut: Future<Output = Ret>,
         Ret: Send + 'static,
     {
@@ -412,7 +460,7 @@ impl<S: Service> Distributed<S> {
     ///     let distr = Distributed::start(service_maker).await;
     ///     
     ///     for shard in 0..get_count() {
-    ///         distr.map_single(shard, CounterService::inc).await;
+    ///         distr.map_single(shard, |pss| pss.instance.inc()).await;
     ///         assert_eq!(shard + 1, counter.load(Ordering::SeqCst));
     ///     }
     ///     distr.stop().await;
@@ -424,11 +472,12 @@ impl<S: Service> Distributed<S> {
         func: Func,
     ) -> impl Future<Output = Ret>
     where
-        Func: Fn(&'a S) -> Fut + Send + Clone + 'static,
+        Func: FnOnce(PeeringShardedService<'a, S>) -> Fut + Send + 'static,
         Fut: Future<Output = Ret>,
         Ret: Send + 'static,
     {
-        self.map_selected(func, std::iter::once(shard_id)).remove(0)
+        let container = unsafe { PtrWrapper::new(self as *const Distributed<S> as _) };
+        self.submit_to(shard_id, func, container)
     }
 }
 
@@ -485,7 +534,7 @@ mod tests {
         let service_maker = move || CounterService(counter_clone.clone());
         let distr = Distributed::start(service_maker).await;
 
-        let futs = distr.map_all(CounterService::inc);
+        let futs = distr.map_all(|pss| pss.instance.inc());
         join_all(futs).await;
         distr.stop().await;
 
@@ -499,7 +548,7 @@ mod tests {
         let service_maker = move || CounterService(counter_clone.clone());
         let distr = Distributed::start(service_maker).await;
 
-        let futs = distr.map_others(CounterService::inc);
+        let futs = distr.map_others(|pss| pss.instance.inc());
         join_all(futs).await;
         distr.stop().await;
 
@@ -514,9 +563,81 @@ mod tests {
         let distr = Distributed::start(service_maker).await;
 
         for shard in 0..get_count() {
-            distr.map_single(shard, CounterService::inc).await;
+            distr.map_single(shard, |pss| pss.instance.inc()).await;
             assert_eq!(shard + 1, counter.load(Ordering::SeqCst));
         }
+
+        distr.stop().await;
+    }
+
+    #[seastar::test]
+    async fn test_one_to_one_comm() {
+        let counter: Arc<AtomicU32> = Default::default();
+        let counter_clone = counter.clone();
+        let service_maker = move || CounterService(counter_clone.clone());
+        let distr = Distributed::start(service_maker).await;
+
+        let even_length = get_count() - get_count() % 2;
+        let shards = (0..get_count()).take(even_length as usize);
+        for shard in shards.filter(|s| s % 2 == 0) {
+            distr
+                .map_single(shard, move |pss| {
+                    pss.container
+                        .map_single(shard + 1, move |pss| pss.instance.inc())
+                })
+                .await;
+            assert_eq!(shard / 2 + 1, counter.load(Ordering::SeqCst));
+        }
+        distr.stop().await;
+    }
+
+    #[seastar::test]
+    async fn test_one_to_many_comm() {
+        let counter: Arc<AtomicU32> = Default::default();
+        let counter_clone = counter.clone();
+        let service_maker = move || CounterService(counter_clone.clone());
+        let distr = Distributed::start(service_maker).await;
+
+        distr
+            .map_single(0, move |pss| async {
+                let futs = pss.container.map_all(move |pss| pss.instance.inc());
+                join_all(futs).await
+            })
+            .await;
+
+        assert_eq!(get_count(), counter.load(Ordering::SeqCst));
+        distr.stop().await;
+    }
+
+    #[seastar::test]
+    async fn test_many_to_one_comm() {
+        let counter: Arc<AtomicU32> = Default::default();
+        let counter_clone = counter.clone();
+        let service_maker = move || CounterService(counter_clone.clone());
+        let distr = Distributed::start(service_maker).await;
+
+        let futs =
+            distr.map_all(move |pss| pss.container.map_single(0, move |pss| pss.instance.inc()));
+        join_all(futs).await;
+
+        assert_eq!(get_count(), counter.load(Ordering::SeqCst));
+        distr.stop().await;
+    }
+
+    #[seastar::test]
+    async fn test_many_to_many_comm() {
+        let counter: Arc<AtomicU32> = Default::default();
+        let counter_clone = counter.clone();
+        let service_maker = move || CounterService(counter_clone.clone());
+        let distr = Distributed::start(service_maker).await;
+
+        let futs = distr.map_all(move |pss| async {
+            let futs = pss.container.map_all(move |pss| pss.instance.inc());
+            join_all(futs).await
+        });
+        join_all(futs).await;
+
+        assert_eq!(get_count().pow(2), counter.load(Ordering::SeqCst));
         distr.stop().await;
     }
 }
