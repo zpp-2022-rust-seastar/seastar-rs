@@ -111,6 +111,8 @@ impl<S: Service> Distributed<S> {
     where
         Func: Fn() -> S + Sync,
     {
+        crate::assert_runtime_is_running();
+
         let stop_caller = get_stop_caller::<S>();
         let dropper = get_dropper_noarg::<S>();
 
@@ -259,6 +261,7 @@ impl<S: Service> Distributed<S> {
     /// }
     /// ```
     pub async fn stop(&self) {
+        crate::assert_runtime_is_running();
         ffi::stop(self._inner.as_ref().unwrap()).await.unwrap();
     }
 
@@ -273,6 +276,8 @@ impl<S: Service> Distributed<S> {
         Ret: Send + 'static,
         I: IntoIterator<Item = u32>,
     {
+        crate::assert_runtime_is_running();
+
         shards
             .into_iter()
             .map(|shard| (shard, func.clone(), self._inner.clone()))
