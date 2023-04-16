@@ -1,0 +1,13 @@
+[package]
+name = "key-value-store"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+cxx = "1"
+cxx-async = { git = "https://github.com/kfernandez31/cxx-async", branch = "seastar" }
+seastar = { path = "../../seastar" }
+
+[build-dependencies]
+cxx-build = { version = "1", features = ["parallel"] }
+pkg-config = "0.3"
