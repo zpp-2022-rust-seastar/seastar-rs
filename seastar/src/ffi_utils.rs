@@ -35,6 +35,14 @@ where
     fn_caller::<Func, Ret>
 }
 
+fn fn_mut_void_caller<Func: FnMut()>(raw_func: *mut u8) {
+    unsafe { (raw_func as *mut Func).as_mut().unwrap()() }
+}
+
+pub const fn get_fn_mut_void_caller<Func: FnMut()>(_: &Func) -> fn(*mut u8) {
+    fn_mut_void_caller::<Func>
+}
+
 /// Free a pointer.
 fn dropper<T>(raw_ptr: *mut u8) {
     unsafe {
