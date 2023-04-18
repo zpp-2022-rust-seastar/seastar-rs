@@ -7,6 +7,7 @@ edition = "2021"
 cxx = "1"
 cxx-async = { git = "https://github.com/kfernandez31/cxx-async", branch = "seastar" }
 seastar = { path = "../../seastar" }
+regex = "1"
 
 [build-dependencies]
 cxx-build = { version = "1", features = ["parallel"] }
