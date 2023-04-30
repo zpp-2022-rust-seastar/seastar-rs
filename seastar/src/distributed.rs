@@ -317,27 +317,11 @@ impl<S: Service> Distributed<S> {
     {
         crate::assert_runtime_is_running();
 
-        shards
-            .into_iter()
-            .map(|shard| {
-                let distr = unsafe { PtrWrapper::new(self as *const Distributed<S> as _) };
-                (shard, func.clone(), self._inner.clone(), distr)
-            })
-            .map(|(shard, func, inner, distr)| async move {
-                submit_to(shard, || async move {
-                    let local = ffi::local(inner.as_ref().unwrap());
-                    let local = unsafe { &*(local as *const S) };
-                    let _ = &distr; // this is to avoid a partial move of the pointer
-                    let distr = unsafe { &*(distr.as_ptr_mut() as *const Distributed<S>) };
-                    let pss = PeeringShardedService {
-                        instance: local,
-                        container: distr,
-                    };
-                    func(pss).await
-                })
-                .await
-            })
-            .collect()
+        let mut res = vec![];
+        for shard in shards.into_iter() {
+            res.push(self.map_single(shard, func.clone()));
+        }
+        res
     }
 
     /// Applies a map function to all instances of the service and returns a vector of the results.
