@@ -205,7 +205,7 @@ impl<ClockType: Clock> Timer<ClockType> {
             return None;
         }
 
-        return Some(Instant::new(ClockType::get_timeout(&self.inner)));
+        Some(Instant::new(ClockType::get_timeout(&self.inner)))
     }
 }
 
