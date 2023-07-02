@@ -75,6 +75,16 @@ void sct_set_callback(
     timer.set_callback(callback_object(callback, caller, dropper));
 }
 
+void sct_set_callback_under_group(
+    steady_clock_timer& timer,
+    uint8_t* callback,
+    rust::Fn<void(uint8_t*)> caller,
+    rust::Fn<void(uint8_t*)> dropper,
+    const scheduling_group& sg
+) {
+    timer.set_callback(sg, callback_object(callback, caller, dropper));
+}
+
 void sct_arm_at(steady_clock_timer& timer, int64_t at) {
     timer.arm(to_sc_time_point(at));
 }
@@ -124,6 +134,16 @@ void lct_set_callback(
     timer.set_callback(callback_object(callback, caller, dropper));
 }
 
+void lct_set_callback_under_group(
+    lowres_clock_timer& timer,
+    uint8_t* callback,
+    rust::Fn<void(uint8_t*)> caller,
+    rust::Fn<void(uint8_t*)> dropper,
+    const scheduling_group& sg
+) {
+    timer.set_callback(sg, callback_object(callback, caller, dropper));
+}
+
 void lct_arm_at(lowres_clock_timer& timer, int64_t at) {
     timer.arm(to_lc_time_point(at));
 }
@@ -171,6 +191,16 @@ void mct_set_callback(
     rust::Fn<void(uint8_t*)> dropper
 ) {
     timer.set_callback(callback_object(callback, caller, dropper));
+}
+
+void mct_set_callback_under_group(
+    manual_clock_timer& timer,
+    uint8_t* callback,
+    rust::Fn<void(uint8_t*)> caller,
+    rust::Fn<void(uint8_t*)> dropper,
+    const scheduling_group& sg
+) {
+    timer.set_callback(sg, callback_object(callback, caller, dropper));
 }
 
 void mct_arm_at(manual_clock_timer& timer, int64_t at) {

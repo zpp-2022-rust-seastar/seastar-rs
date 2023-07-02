@@ -1,4 +1,5 @@
 use crate::cxx_async_futures::VoidFuture;
+use crate::SchedulingGroup;
 use core::cmp::Ordering;
 use cxx::UniquePtr;
 use std::fmt;
@@ -37,6 +38,13 @@ mod ffi {
         fn manual_sleep(nanos: i64) -> VoidFuture;
     }
 
+    #[namespace = "seastar_ffi::scheduling"]
+    unsafe extern "C++" {
+        include!("seastar/src/scheduling.hh");
+
+        type scheduling_group = crate::scheduling_group;
+    }
+
     #[namespace = "seastar_ffi::timer::steady_clock"]
     unsafe extern "C++" {
         include!("seastar/src/timer.hh");
@@ -50,6 +58,14 @@ mod ffi {
             callback: *mut u8, // u8 is a substitute for c_void that isn't supported by cxx.
             caller: unsafe fn(*mut u8),
             dropper: unsafe fn(*mut u8),
+        );
+
+        unsafe fn sct_set_callback_under_group(
+            timer: Pin<&mut steady_clock_timer>,
+            callback: *mut u8,
+            caller: unsafe fn(*mut u8),
+            dropper: unsafe fn(*mut u8),
+            sg: &scheduling_group,
         );
 
         fn sct_arm_at(timer: Pin<&mut steady_clock_timer>, at: i64);
@@ -80,6 +96,14 @@ mod ffi {
             dropper: unsafe fn(*mut u8),
         );
 
+        unsafe fn lct_set_callback_under_group(
+            timer: Pin<&mut lowres_clock_timer>,
+            callback: *mut u8,
+            caller: unsafe fn(*mut u8),
+            dropper: unsafe fn(*mut u8),
+            sg: &scheduling_group,
+        );
+
         fn lct_arm_at(timer: Pin<&mut lowres_clock_timer>, at: i64);
         fn lct_arm_at_periodic(timer: Pin<&mut lowres_clock_timer>, at: i64, period: i64);
 
@@ -106,6 +130,14 @@ mod ffi {
             callback: *mut u8, // u8 is a substitute for c_void that isn't supported by cxx.
             caller: unsafe fn(*mut u8),
             dropper: unsafe fn(*mut u8),
+        );
+
+        unsafe fn mct_set_callback_under_group(
+            timer: Pin<&mut manual_clock_timer>,
+            callback: *mut u8,
+            caller: unsafe fn(*mut u8),
+            dropper: unsafe fn(*mut u8),
+            sg: &scheduling_group,
         );
 
         fn mct_arm_at(timer: Pin<&mut manual_clock_timer>, at: i64);
@@ -569,6 +601,14 @@ mod clock_implementation {
             dropper: fn(*mut u8),
         );
 
+        fn set_callback_under_group(
+            timer: &mut Self::CppTimer,
+            callback: *mut u8,
+            caller: fn(*mut u8),
+            dropper: fn(*mut u8),
+            sg: &SchedulingGroup,
+        );
+
         fn arm_at(timer: &mut Self::CppTimer, at: i64);
 
         fn arm_at_periodic(timer: &mut Self::CppTimer, at: i64, period: i64);
@@ -610,6 +650,24 @@ macro_rules! timer_impl {
                         callback,
                         caller,
                         dropper,
+                    );
+                }
+            }
+
+            fn set_callback_under_group(
+                timer: &mut Self::CppTimer,
+                callback: *mut u8,
+                caller: fn(*mut u8),
+                dropper: fn(*mut u8),
+                sg: &SchedulingGroup,
+            ) {
+                unsafe {
+                    [<$ffi_pref _set_callback_under_group>](
+                        timer.pin_mut(),
+                        callback,
+                        caller,
+                        dropper,
+                        &sg.inner,
                     );
                 }
             }
